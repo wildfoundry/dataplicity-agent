@@ -1,7 +1,7 @@
 """
 Port forwarding client.
 
-Reads and writes to a socket, proxied over m2m
+Reads and writes to a socket, proxied over m2m.
 
 """
 
@@ -177,7 +177,7 @@ class Connection(threading.Thread):
         log.debug('channel close')
         with self._lock:
             # Shut down the socket
-            # This will cause an exeptional condition in the select loop,
+            # This will cause an exceptional condition in the select loop,
             # which will subsequently exit cleanly
             self._flush_buffer()
             self._shutdown_write()
