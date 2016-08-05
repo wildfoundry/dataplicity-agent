@@ -18,8 +18,8 @@ from .dispatcher import Dispatcher, expose
 from .packets import M2MPacket as Packet
 from .packets import PacketType
 
-log = logging.getLogger('m2m.client')
-server_log = logging.getLogger('m2m.log')
+log = logging.getLogger('m2m')
+server_log = logging.getLogger('m2m.server')
 
 
 class ClientError(Exception):

@@ -2,17 +2,18 @@
 
 from __future__ import print_function
 from __future__ import unicode_literals
-import subprocess
-
-from dataplicity import constants
-from dataplicity.m2m import WSClient, EchoService
-from dataplicity.m2m.remoteprocess import RemoteProcess
-
-import os
-import threading
 
 import logging
-log = logging.getLogger('dataplicity.m2m')
+import os
+import subprocess
+import threading
+
+from . import constants
+from .m2m import WSClient, EchoService
+from dataplicity.m2m.remoteprocess import RemoteProcess
+
+
+log = logging.getLogger('m2m')
 
 
 class Terminal(object):
@@ -179,11 +180,7 @@ class M2MManager(object):
             return None
         log.debug('m2m url is %s', url)
 
-        identity = conf.get('m2m', 'identity', None)
-        if identity is not None:
-            log.debug('m2m identity is %s (works with internal development server only)', identity)
-
-        manager = cls(client, url, identity=identity)
+        manager = cls(client, url)
 
         for section, name in conf.qualified_sections('terminal'):
             cmd = conf.get(section, 'command', os.environ.get('SHELL', None))
@@ -220,6 +217,7 @@ class M2MManager(object):
             self.m2m_client.close()
 
     def add_terminal(self, name, remote_process, user=None, group=None):
+        """Add a terminal for a remote process."""
         log.debug("adding terminal '%s' %s", name, remote_process)
         self.terminals[name] = Terminal(name, remote_process, user=user, group=group)
 

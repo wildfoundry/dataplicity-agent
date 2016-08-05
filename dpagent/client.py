@@ -9,7 +9,9 @@ import time
 from . import constants
 from . import device_meta
 from . import settings
-from .jsonrpc import JSONRPC
+from .jsonrpc import JSONRPC, JSONRPCError
+from .m2mmanager import M2MManager
+from .portforward import PortForwardManager
 
 log = logging.getLogger('dpagent')
 
@@ -37,10 +39,15 @@ class Client(object):
 
             self.remote = JSONRPC(self.rpc_url)
             self.serial = conf.get('device', 'serial')
-            log.debug('serial=%s', self.serial)
             self.auth_token = conf.get('device', 'auth')
             self.poll_rate_seconds = conf.get_float("daemon", "poll", 60.0)
+
+            log.debug('serial=%s', self.serial)
             log.debug('poll=%s', self.poll_rate_seconds)
+
+            self.m2m = M2MManager.init_from_conf(self, conf)
+            self.port_forward = PortForwardManager.init_from_conf(self, conf)
+
         except:
             log.exception('failed to initialize client')
             raise
@@ -73,7 +80,7 @@ class Client(object):
         pass
 
     @classmethod
-    def make_sync_id(self):
+    def make_sync_id(cls):
         """Make a random sync ID."""
         sync_id = ''.join(
             random.choice('abcdefghijklmnopqrstuvwxyz') for _ in xrange(12)
@@ -117,7 +124,7 @@ class Client(object):
         try:
             meta = device_meta.get_meta()
         except:
-            self.log.exception('error getting meta')
+            log.exception('error getting meta')
         else:
             batch.call_with_id(
                 'set_agent_version_result',
@@ -141,5 +148,44 @@ class Client(object):
             )
 
     def _sync_m2m(self, batch):
-        log.debug("TODO: sync_m2m")
-        pass
+        try:
+            if self.m2m is not None:
+                self.m2m.on_sync(batch)
+        except:
+            log.exception('error syncing m2m')
+
+    def set_m2m_identity(self, identity):
+        """Tell the server of our m2m identity, return the identity if it was set, or None if it could not be set."""
+        if self.auth_token is None:
+            if not self.disable_sync:
+                self.log.debug("skipping m2m identity notify because we don't have an auth token")
+            return None
+
+        try:
+            log.debug('notiying server (%s) of m2m identity (%s)',
+                      self.remote.url,
+                      identity or '<None>')
+            with self.remote.batch() as batch:
+                batch.call_with_id('authenticate_result',
+                                   'device.check_auth',
+                                   device_class='tuxtunnel',
+                                   serial=self.serial,
+                                   auth_token=self.auth_token)
+                batch.call_with_id('associate_result',
+                                   'm2m.associate',
+                                   identity=identity or '')
+            # These methods may potentially throw JSONRPCErrors
+            batch.get_result('authenticate_result')
+            batch.get_result('associate_result')
+        except JSONRPCError as e:
+            log.error('unable to associate m2m identity ("%s"=%s, "%s")',
+                      e.method, e.code, e.message)
+            return None
+        except:
+            log.exception('unable to set m2m identity')
+            return None
+        else:
+            # If we made it here the server has acknowledged it received the identity
+            # It will be sent again on sync anyway, as a precaution
+            log.debug('server received m2m identity %s', identity)
+            return identity
