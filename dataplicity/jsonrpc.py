@@ -20,7 +20,8 @@ class ServerUnreachableError(Exception):
     def __init__(self, url, original):
         self.url = url
         self.original = original
-        super(ServerUnreachableError, self).__init__("unable to contact JSONRPC server '{}' ({})".format(url, original))
+        _error = "unable to contact JSONRPC server '{url}' ({original})".format(url, original)
+        super(ServerUnreachableError, self).__init__(_error)
 
 
 class InvalidResponseError(ProtocolError):
@@ -43,10 +44,6 @@ class RemoteError(JSONRPCError):
 
 class RemoteMethodError(JSONRPCError):
     """An error returned from the server"""
-
-
-class AbandonBatch(Exception):
-    """Thrown manually to indicate the batch should *not* be sent"""
 
 
 class ErrorCode(object):

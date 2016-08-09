@@ -34,9 +34,8 @@ setup(
     },
 
     install_requires=[
-        'websocket-client',
-        'fs>=0.5.0',
-        'enum34',
-        'six',
+        'enum34==1.1.6',
+        'six==1.10.0',
+        'websocket-client==0.37.0',
     ]
 )

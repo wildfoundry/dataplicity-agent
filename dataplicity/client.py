@@ -7,10 +7,12 @@ from threading import Event, Lock
 import random
 import time
 
+from _version import __version__
 from . import constants
 from . import device_meta
 from . import jsonrpc
 from . import settings
+from . import tools
 from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
 
@@ -30,6 +32,9 @@ class Client(object):
 
     def _init(self):
         try:
+            log.info('dataplicity %s', __version__)
+            log.info('uname=%s', ' '.join(platform.uname()))
+
             conf = self.conf = settings.read(self.conf_path)
             if self.rpc_url is None:
                 self.rpc_url = conf.get(
@@ -39,11 +44,10 @@ class Client(object):
                 )
 
             self.remote = jsonrpc.JSONRPC(self.rpc_url)
-            self.serial = conf.get('device', 'serial')
-            self.auth_token = conf.get('device', 'auth')
+            self.serial = tools.resolve_value(conf.get('device', 'serial'))
+            self.auth_token = tools.resolve_value(conf.get('device', 'auth'))
             self.poll_rate_seconds = conf.get_float("daemon", "poll", 60.0)
 
-            log.info('uname=%s', ' '.join(platform.uname()))
             log.info('api=%s', self.rpc_url)
             log.info('serial=%s', self.serial)
             log.info('poll=%s', self.poll_rate_seconds)
