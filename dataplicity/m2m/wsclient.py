@@ -119,7 +119,6 @@ class Channel(object):
         bytes_remaining = count
 
         # Block until data
-
         if block:
             if not self._data_event.wait(timeout):
                 return b''

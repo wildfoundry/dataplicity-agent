@@ -2,18 +2,19 @@ from __future__ import unicode_literals
 from __future__ import print_function
 
 import logging
+import platform
 from threading import Event, Lock
 import random
 import time
 
 from . import constants
 from . import device_meta
+from . import jsonrpc
 from . import settings
-from .jsonrpc import JSONRPC, JSONRPCError
 from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
 
-log = logging.getLogger('dpagent')
+log = logging.getLogger('agent')
 
 
 class Client(object):
@@ -37,13 +38,15 @@ class Client(object):
                     constants.SERVER_URL
                 )
 
-            self.remote = JSONRPC(self.rpc_url)
+            self.remote = jsonrpc.JSONRPC(self.rpc_url)
             self.serial = conf.get('device', 'serial')
             self.auth_token = conf.get('device', 'auth')
             self.poll_rate_seconds = conf.get_float("daemon", "poll", 60.0)
 
-            log.debug('serial=%s', self.serial)
-            log.debug('poll=%s', self.poll_rate_seconds)
+            log.info('uname=%s', ' '.join(platform.uname()))
+            log.info('api=%s', self.rpc_url)
+            log.info('serial=%s', self.serial)
+            log.info('poll=%s', self.poll_rate_seconds)
 
             self.m2m = M2MManager.init_from_conf(self, conf)
             self.port_forward = PortForwardManager.init_from_conf(self, conf)
@@ -107,20 +110,24 @@ class Client(object):
                     auth_token=self.auth_token,
                     sync_id=sync_id
                 )
+                if not self._sync_meta(batch):
+                    batch.abandon()
 
-                self._sync_m2m(batch)
-
-                if not self._sent_meta:
-                    self._sync_meta(batch)
-
-            # get_result will throw exceptions with (hopefully) helpful error messages if they fail
-            batch.get_result('authenticate_result')
+            if batch.sent:
+                # get_result will throw exceptions with (hopefully) helpful
+                # error messages if they fail
+                batch.get_result('authenticate_result')
+                self._check_meta(batch)
 
         finally:
             ellapsed = time.time() - start
             log.debug('sync complete %0.2fs', ellapsed)
 
     def _sync_meta(self, batch):
+        """Sync meta information regarding host device."""
+        if self._sent_meta:
+            return False
+
         try:
             meta = device_meta.get_meta()
         except:
@@ -147,12 +154,22 @@ class Client(object):
                 uname=meta['uname']
             )
 
-    def _sync_m2m(self, batch):
+    def _check_meta(self, batch):
+        """Check previously sent meta information."""
+        if self._sent_meta:
+            return
         try:
-            if self.m2m is not None:
-                self.m2m.on_sync(batch)
-        except:
-            log.exception('error syncing m2m')
+            batch.check(
+                'set_agent_version_result',
+                'set_machine_type_result',
+                'set_os_version_result',
+                'set_uname_result'
+            )
+        except Exception as e:
+            self.log.warning('failed to set device meta (%s)', e)
+        else:
+            # Success! Don't send again.
+            self._sent_meta = True
 
     def set_m2m_identity(self, identity):
         """Tell the server of our m2m identity, return the identity if it was set, or None if it could not be set."""
@@ -177,12 +194,14 @@ class Client(object):
             # These methods may potentially throw JSONRPCErrors
             batch.get_result('authenticate_result')
             batch.get_result('associate_result')
-        except JSONRPCError as e:
+        except jsonrpc.JSONRPCError as e:
             log.error('unable to associate m2m identity ("%s"=%s, "%s")',
                       e.method, e.code, e.message)
             return None
+        except jsonrpc.ServerUnreachableError as e:
+            log.debug('set m2m identity failed, %s', e)
         except:
-            log.exception('unable to set m2m identity')
+            log.error('unable to set m2m identity')
             return None
         else:
             # If we made it here the server has acknowledged it received the identity

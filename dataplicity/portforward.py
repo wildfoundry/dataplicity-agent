@@ -15,7 +15,7 @@ import threading
 import weakref
 
 
-log = logging.getLogger("wormhole")
+log = logging.getLogger("portforward")
 
 
 class Connection(threading.Thread):

@@ -9,10 +9,9 @@ class DataplicityError(Exception):
 
 
 class ConfigError(DataplicityError):
-    """Thrown when there is a problem reading config information"""
+    """Thrown when there is a problem reading config information."""
     pass
 
 
 class StartupError(DataplicityError):
     pass
-

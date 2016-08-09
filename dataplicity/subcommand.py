@@ -33,4 +33,3 @@ class SubCommandType(object):
 
 class SubCommand(with_metaclass(SubCommandMeta, SubCommandType)):
     pass
-

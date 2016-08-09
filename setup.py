@@ -9,14 +9,14 @@ classifiers = [
 ]
 
 # http://bit.ly/2alyerp
-with open('dpagent/_version.py') as f:
+with open('dataplicity/_version.py') as f:
     exec(f.read())
 
 with open('README.md') as f:
     long_desc = f.read()
 
 setup(
-    name='dpagent',
+    name='dataplicity',
     version=__version__,
     description="Platform for connected devices",
     long_description=long_desc,
@@ -29,7 +29,7 @@ setup(
 
     entry_points={
         "console_scripts": [
-           'dpagent = dpagent.app:main'
+           'dataplicity = dataplicity.app:main'
         ]
     },
 

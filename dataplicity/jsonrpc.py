@@ -45,6 +45,10 @@ class RemoteMethodError(JSONRPCError):
     """An error returned from the server"""
 
 
+class AbandonBatch(Exception):
+    """Thrown manually to indicate the batch should *not* be sent"""
+
+
 class ErrorCode(object):
     """Enumeration of JSONRPC error codes"""
 
@@ -84,13 +88,14 @@ class Batch(object):
         self.results = None
         self.ids_used = set()
         self.methods = {}
+        self._abandoned = False
         super(Batch, self).__init__()
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if not exc_type:
+        if not exc_type and not self._abandoned:
             self.send()
 
     def call(self, method, **params):
@@ -155,6 +160,10 @@ class Batch(object):
         """Check call IDs for exceptions, discard results."""
         for call_id in call_ids:
             self.get_result(call_id)
+
+    def abandon(self, reason=None):
+        """Mark batch as 'abandoned' (will not be sent)."""
+        self._abandoned = True
 
 
 class JSONRPC(object):

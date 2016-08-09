@@ -39,7 +39,7 @@ def get_machine_type():
     """
     rpi_version = None
     try:
-        with open('/proc/cpuinfo') as fp:
+        with open('/proc/cpuinfo', 'rb') as fp:
             for line in fp:
                 if ':' not in line:
                     continue

@@ -8,10 +8,10 @@ import sys
 from . import __version__
 from . import subcommand
 from .client import Client
-from .subcommands import report, run
+from .subcommands import *
 from . import constants
 
-log = logging.getLogger('dpagent')
+log = logging.getLogger('app')
 
 # Map log levels on to integer values
 _logging_level_names = {
@@ -36,7 +36,7 @@ class App(object):
 
     def _make_arg_parser(self):
         parser = argparse.ArgumentParser(
-            "dpagent",
+            "dataplicity",
             description=self.__doc__
         )
 
@@ -109,12 +109,11 @@ class App(object):
             if self.args.debug:
                 raise
             #sys.stderr.write(str(e) + '\n')
-            sys.stderr.write("(dpagent {}) {}\n".format(__version__, e))
+            sys.stderr.write("(dataplicity {}) {}\n".format(__version__, e))
             cmd = sys.argv[0].rsplit('/', 1)[-1]
             debug_cmd = ' '.join([cmd, '--debug'] + sys.argv[1:])
             sys.stderr.write("(run '{}' for a full traceback)\n".format(debug_cmd))
             return -1
-
 
 
 def main():

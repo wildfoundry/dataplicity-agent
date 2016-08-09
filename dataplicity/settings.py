@@ -1,7 +1,7 @@
 from __future__ import unicode_literals
 from __future__ import print_function
 
-from os.path import abspath, normpath, exists, expanduser, join, dirname, basename
+from os.path import abspath, normpath, join, dirname, basename
 
 from . import errors
 from .compat import PY2, text_type
@@ -52,7 +52,9 @@ class DPConfigParser(SafeConfigParser):
             return SafeConfigParser.get(self, section, key)
         except configparser.Error:
             if default is Ellipsis:
-                raise errors.ConfigError("required key [{}]/{} is missing from conf file".format(section, key))
+                raise errors.ConfigError(
+                    "required key [{}]/{} is missing from conf file".format(section, key)
+                )
             return default
 
     def has_setting(self, section, key):
@@ -84,7 +86,9 @@ class DPConfigParser(SafeConfigParser):
         try:
             setting = float(setting)
         except ValueError:
-            raise errors.ConfigError("conf value [{}]/{} must be a valid float".format(section, key))
+            raise errors.ConfigError(
+                "conf value [{}]/{} must be a valid float".format(section, key)
+            )
         return setting
 
     def get_integer(self, section, key, default=Ellipsis):
@@ -92,7 +96,9 @@ class DPConfigParser(SafeConfigParser):
         try:
             setting = int(setting)
         except ValueError:
-            raise errors.ConfigError("conf value [{}]/{} must be a valid integer".format(section, key))
+            raise errors.ConfigError(
+                "conf value [{}]/{} must be a valid integer".format(section, key)
+            )
         return setting
 
     def get_list(self, section, key, default=Ellipsis):
@@ -111,7 +117,8 @@ class DPConfigParser(SafeConfigParser):
         text = self.get(section, key, default)
         if text is default:
             return default
-        return parse_list(text)
+        string_list = [l.strip() for l in s.splitlines() if l]
+        return string_list
 
     def qualified_sections(self, section_type):
         """Yields sections qualified with a colon, i.e. [task:monitor]
@@ -126,102 +133,11 @@ class DPConfigParser(SafeConfigParser):
                     yield section, section_name
 
 
-def _normalize_path(p):
-    return normpath(expanduser(p))
-
-
-def extend_cfg(cfg, path):
-    """Extend the cfg"""
-    # If the cfg contains an [extend] section then overlay paths
-    # in the 'conf' option
-
-    visited = set()
-    extends_chain = [cfg]
-    path_dir = dirname(path)
-
-    extend = cfg.get('extend', 'conf', None)
-    while extend is not None:
-        extend_path = abspath(join(path_dir, extend))
-        if extend_path in visited:
-            raise errors.StartupError("Recursive extends in conf files")
-        visited.add(extend_path)
-        cfg = DPConfigParser()
-        try:
-            with open(extend_path, 'rb') as conf_file:
-                cfg.read(extend_path)
-        except IOError:
-            # Doesn't exist. Extends chain ends here
-            break
-        extends_chain.insert(0, cfg)
-        extend = cfg.get('extend', 'conf', None)
-
-    # Merge extended conf files
-    extended_cfg = extends_chain[0]
-    for cfg in extends_chain[1:]:
-        for section in cfg.sections():
-            if section == 'extend':
-                continue
-            if not extended_cfg.has_section(section):
-                extended_cfg.add_section(section)
-            for k, v in cfg.items(section):
-                extended_cfg.set(section, k, v)
-
-    extended_cfg.path = path
-    return extended_cfg
-
-
-def read(*paths):
+def read(path):
     """Reads conf file from one of a number of locations"""
     cfg = DPConfigParser()
-    expanded_paths = [abspath(normpath(expanduser(p))) for p in paths]
-    for path in expanded_paths:
-        if not exists(path):
-            continue
-        try:
-            with open(path, 'rt') as conf_file:
-                cfg.path = path
-                cfg.readfp(conf_file, filename=path)
-        except IOError:
-            pass
-        else:
-            return extend_cfg(cfg, path)
-    paths_txt = ", ".join('"%s"' % p for p in paths)
-    raise errors.StartupError("conf not found, looked for %s" % paths_txt)
-
-
-def read_default(*paths):
-    """Read settings or return an empty cfg if no conf file is found"""
-    try:
-        return read(*paths)
-    except errors.StartupError:
-        return DPConfigParser()
-
-
-def read_from_file(conf_file, filename='?'):
-    cfg = DPConfigParser()
-    cfg.readfp(conf_file, filename=filename)
+    cfg.read(path)
     return cfg
-
-
-def read_contents(path, blank=False):
-    """Read a settings file and return the contents plus a settings instance"""
-    cfg = DPConfigParser()
-    try:
-        with open(path, 'rb') as conf_file:
-            contents = conf_file.read()
-            conf_file.seek(0)
-            cfg.path = path
-            cfg.readfp(conf_file, filename=path)
-    except (OSError, IOError):
-        if blank:
-            return b'', cfg
-        raise
-    return contents, cfg
-
-
-def parse_list(s):
-    """Parse a multi-line string in to a list"""
-    return [l.strip() for l in s.splitlines() if l]
 
 
 if __name__ == "__main__":

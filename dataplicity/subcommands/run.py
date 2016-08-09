@@ -1,12 +1,7 @@
 from __future__ import unicode_literals
 from __future__ import print_function
 
-import logging
-
 from ..subcommand import SubCommand
-
-
-log = logging.getLogger('dpagent')
 
 
 class Run(SubCommand):

@@ -1,5 +1,12 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+
+import logging
 
 from ..subcommand import SubCommand
+
+
+log = logging.getLogger('registersamplers')
 
 
 class Report(SubCommand):
@@ -10,4 +17,4 @@ class Report(SubCommand):
         return parser
 
     def run(self):
-        pass
+        log.warning('not implemented')
