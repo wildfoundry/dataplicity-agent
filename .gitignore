@@ -9,3 +9,4 @@ __firmware__
 *.egg-info
 dist/
 .DS_Store
+bin/
