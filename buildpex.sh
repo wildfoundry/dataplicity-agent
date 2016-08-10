@@ -1,4 +1,5 @@
 #!/bin/bash
+pip install requests
 pip install pex -U
 mkdir -p bin
-pex -r requirements.txt dataplicity -o bin/dataplicity -c dataplicity
+pex -v -r requirements.txt dataplicity -o bin/dataplicity -c dataplicity
