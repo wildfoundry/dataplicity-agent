@@ -8,7 +8,7 @@ import sys
 from . import __version__
 from . import subcommand
 from .client import Client
-from .subcommands import *
+from .subcommands import install, registersamplers, report, run
 from . import constants
 
 log = logging.getLogger('app')
