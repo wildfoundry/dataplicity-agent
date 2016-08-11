@@ -142,10 +142,10 @@ class Connection(threading.Thread):
         try:
             _socket.connect(self.service.host_port)
         except socket.timeout:
-            log.exception('timed out connecting to server')
+            log.error('timed out connecting to server')
             return False
-        except IOError:
-            log.exception('IO Error when connecting')
+        except IOError as e:
+            log.error('IO Error when connecting, %s', e)
             return False
         except:
             log.exception('error connecting')
