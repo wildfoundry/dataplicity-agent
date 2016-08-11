@@ -67,14 +67,12 @@ class App(object):
         return parser
 
     def _init_logging(self):
-        if self.args.quiet:
-            return
-
         format = "%(asctime)s:%(name)s:%(levelname)s: %(message)s"
         datefmt = "[%d/%b/%Y %H:%M:%S]"
+        log_level = 'CRITICAL' if self.args.quiet else self.args.log_level.upper()
 
         try:
-            level = _logging_level_names[self.args.log_level.upper()]
+            level = _logging_level_names[log_level]
         except IndexError:
             self.error('invalid log level')
 
