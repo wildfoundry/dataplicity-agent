@@ -58,9 +58,11 @@ class App(object):
                                            help="sub-command help")
 
         for name, _subcommand in self.subcommands.items():
-            subparser = subparsers.add_parser(name,
-                                              help=_subcommand.help,
-                                              description=getattr(_subcommand, '__doc__', None))
+            subparser = subparsers.add_parser(
+                name,
+                help=_subcommand.help,
+                description=getattr(_subcommand, '__doc__', None)
+            )
             _subcommand.add_arguments(subparser)
         return parser
 
@@ -82,7 +84,6 @@ class App(object):
 
     def make_client(self):
         path = self.args.conf or constants.CONF_PATH
-
         client = Client(
             path,
             rpc_url=self.args.server_url
@@ -108,13 +109,11 @@ class App(object):
         except Exception as e:
             if self.args.debug:
                 raise
-            #sys.stderr.write(str(e) + '\n')
             sys.stderr.write("(dataplicity {}) {}\n".format(__version__, e))
             cmd = sys.argv[0].rsplit('/', 1)[-1]
             debug_cmd = ' '.join([cmd, '--debug'] + sys.argv[1:])
             sys.stderr.write("(run '{}' for a full traceback)\n".format(debug_cmd))
             return -1
-
 
 def main():
     """Dataplicity Agent entry point."""

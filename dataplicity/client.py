@@ -176,7 +176,10 @@ class Client(object):
             self._sent_meta = True
 
     def set_m2m_identity(self, identity):
-        """Tell the server of our m2m identity, return the identity if it was set, or None if it could not be set."""
+        """
+        Tell the server of our m2m identity, return the identity if it was set,
+        or None if it could not be set.
+        """
         if self.auth_token is None:
             if not self.disable_sync:
                 self.log.debug("skipping m2m identity notify because we don't have an auth token")

@@ -235,14 +235,6 @@ class M2MManager(object):
             terminal_name = data['name']
             size = data.get('size', None)
             self.open_terminal(terminal_name, port, size=size)
-        elif action == "open-keyboard":
-            port = data['port']
-            keyboard_name = data['name']
-            self.open_keyboard(keyboard_name, port)
-        elif action == "open-buttons":
-            port = data['port']
-            buttons_group = data['name']
-            self.open_buttons(buttons_group, port)
         elif action == "open-echo":
             port = data['port']
             self.open_echo_service(port)
@@ -261,12 +253,6 @@ class M2MManager(object):
             return
         terminal.launch(self.m2m_client.get_channel(port), size=size)
 
-    def open_keyboard(self, name, port):
-        self.client.rc.open_keyboard(name, self.m2m_client.get_channel(port))
-
-    def open_buttons(self, name, port):
-        self.client.rc.open_buttons(name, self.m2m_client.get_channel(port))
-
     def open_echo_service(self, port):
         log.debug('opening echo service on m2m port %s', port)
         EchoService(self.m2m_client.get_channel(port))
@@ -278,6 +264,7 @@ class M2MManager(object):
         """Initiate a reboot."""
         # TODO: consider initiating a graceful shutdown of dpcore that ends in a rebooot
         command = '/usr/bin/sudo /sbin/reboot'
+        log.debug('rebooting!')
         # Why not subprocess.call? Because it will block this process and prevent graceful exit!
         pid = subprocess.Popen(command.split()).pid
         log.debug('opened reboot process %s', pid)

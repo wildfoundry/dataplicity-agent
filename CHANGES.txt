@@ -1,0 +1,22 @@
+0.4.0
+-----
+
+Leaner Dataplicity Agent
+
+0.3.22
+------
+
+0.3.21
+------
+
+Fix for reconnect issues
+
+0.3.20
+------
+
+Implemented Port Forwarding
+
+0.3.8
+-----
+
+Added Remote Buttons
