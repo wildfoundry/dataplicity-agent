@@ -14,6 +14,7 @@ import datetime
 import json
 import os
 import platform
+import subprocess
 import traceback
 
 # {% if INSTALLER_SETTINGS %} {{ INSTALLER_SETTINGS|safe }} {% else %}
@@ -117,22 +118,25 @@ def run(args):
         log('{}={!r}', k, v)
     log('')
 
+    show_step(1, 'extracting agent')
+
     agent_dir = get_agent_dir()
-    make_dir(agent_dir)
     agent_path = write_agent(agent_dir, 'dataplicity')
     executable_path = get_executable_path()
+
+    make_dir(agent_dir)
     link(agent_path, executable_path)
     make_executable(agent_path)
 
 
 def show_step(n, msg):
+    """Show current step information."""
     step_msg = "[[ Step {n} of {max} ]] {msg}".format(
         n=n,
         max=MAX_STEPS,
         msg=msg
     )
     user(step_msg)
-    log(step_msg)
 
 
 def get_agent_dir():
@@ -190,6 +194,10 @@ def make_executable(path):
     os.chmod(path, 0o777)
     log('[make_executable] {}', path)
 
+
+def apt_get(package):
+    log('[apt_get] {}', package)
+    retcode = subprocess.call(['apt-get', package])
 
 
 # This is a b64encoded version of the agent
