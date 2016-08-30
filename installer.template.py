@@ -32,7 +32,9 @@ SETTINGS = """
     "agent_version": "0.4.0",
     "base_dir": "./__agent__/",
     "m2m_url": "wss://m2m.dataplicity.com",
-    "api_url": "https://api.dataplicity.com"
+    "api_url": "https://api.dataplicity.com",
+    "dry_run": true,
+    "version": "0.4.0"
 }
 """
 # {% endif %}
@@ -40,7 +42,7 @@ settings = json.loads(SETTINGS)
 
 SERIAL_PATH = '/opt/dataplicity/tuxtunnel/serial'
 AUTH_PATH = '/opt/dataplicity/tuxtunnel/auth'
-MAX_STEPS = 4
+MAX_STEPS = 5
 
 
 # A string template for the supervisor conf
@@ -58,18 +60,36 @@ stderr_logfile=/var/log/tuxtunnel.log
 
 """
 
+LOG_PATH = "/var/log/ttagentinstall.log"
+try:
+    with open(LOG_PATH, 'wb'):
+        pass
+except IOError:
+    pass
+install_log = []
+
 
 def log(text, *args, **kwargs):
     """Logs technical details, not intended for the user."""
-    # This will eventually go to a file, and sent back to us
-    # Get the caller function name
-    caller = inspect.stack()[1][3]
-    log_text = text.format(*args, **kwargs)
     time_str = datetime.datetime.utcnow().ctime()
+    caller = inspect.stack()[1][3]  # Get the caller function name
+    log_text = text.format(*args, **kwargs)
     lines = (log_text + '\n').splitlines()
-    for line in lines:
-        log_text = "[{}] {}: {}".format(time_str, caller, line)
-        print(log_text)
+
+    write_lines = '\n'.join(
+        "[{}] {}: {}".format(time_str, caller, line)
+        for line in lines
+    )
+
+    if settings['dry_run']:
+        print(write_lines)
+    else:
+        try:
+            with open(LOG_PATH, 'a') as log_file:
+                log_file.write(write_lines)
+        except IOError as e:
+            print(e)
+            pass
 
 
 def user(text, *args, **kwargs):
@@ -123,18 +143,14 @@ def run(args):
     """Top level procedural code to install agent."""
 
     user('Welcome to the Dataplicity Agent Installer')
-
     log_info()
 
     # ------------------------------------------------------------------
     show_step(1, 'extracting agent')
-
     agent_dir = get_agent_dir()
     make_dir(agent_dir)
-
     agent_path = write_agent(agent_dir, 'dataplicity')
     executable_path = get_executable_path()
-
     link(agent_path, executable_path)
     make_executable(agent_path)
 
@@ -147,12 +163,12 @@ def run(args):
     apt_get('supervisor')
     install_supervisor_conf()
 
-
+    # ------------------------------------------------------------------
     show_step(4, "starting agent")
     run_system('service', 'supervisor', 'restart')
     # TODO: Poll for version file
 
-
+    # ------------------------------------------------------------------
     congratulations('TODO: URL')
 
 
@@ -253,6 +269,8 @@ def run_system(*command):
 
     """
     log('calling {}', ' '.join(command))
+    if settings['dry_run']:
+        return
     try:
         output = subprocess.check_output(command)
         returncode = 0
@@ -266,8 +284,9 @@ def run_system(*command):
 
 def apt_get(package):
     """Install an apt-get package."""
-    return True
-
+    log('installing package {}', package)
+    if settings['dry_run']:
+        return
     return run_system('apt-get', 'install', package)
 
 
@@ -285,32 +304,40 @@ def install_supervisor_conf():
     log(conf)
     log('')
 
-    # return
+    if settings['dry_run']:
+        return
+
     with open('/etc/supervisor/conf.d/tuxtunnel.conf', 'wt') as f:
         f.write(conf)
 
 
 def create_user():
     """Create a dataplicity user and apply the appropriate permissions."""
+
+    log('creating user')
+    if settings['dry_run']:
+        return
+
     run_system('useradd', 'dataplicity')
 
     with open('/etc/sudoers', 'rt') as sudoers_file:
         lines = sudoers_file.read().splitlines()
-    for line in lines:
-        if line.startswith('dataplicity '):
-            log('dataplicity in sudoers')
+
+    dataplicity_sudoer =\
+        'dataplicity ALL=(ALL) NOPASSWD: /sbin/reboot'
+
+    if dataplicity_sudoer in lines:
+        log('sudoer line present')
     else:
-        log('adding dataplicity to sudoers')
-        dataplicity_sudoer =\
-            '\ndataplicity ALL=(ALL) NOPASSWD: /sbin/reboot\n'
+        log('adding sudoer line')
         with open('/etc/sudoers', 'at') as sudoers_file:
-            sudoers_file.append(dataplicity_sudoer)
+            sudoers_file.append("\n{}\n".format(dataplicity_sudoer))
 
 
 def congratulations(device_url):
     """Tell the user about install."""
     user('')
-    user('Dataplicity agent is not installed!')
+    user('Dataplicity agent is now installed!')
     user('Your device will be online in a few seconds')
     user(
         'Visit {device_url} to manage your device',
