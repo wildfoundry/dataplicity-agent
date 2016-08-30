@@ -33,8 +33,7 @@ SETTINGS = """
     "base_dir": "./__agent__/",
     "m2m_url": "wss://m2m.dataplicity.com",
     "api_url": "https://api.dataplicity.com",
-    "dry_run": true,
-    "version": "0.4.0"
+    "dry_run": true
 }
 """
 # {% endif %}
@@ -65,6 +64,7 @@ try:
     with open(LOG_PATH, 'wb'):
         pass
 except IOError:
+    # Probably means no permission
     pass
 install_log = []
 
@@ -119,8 +119,15 @@ def make_dir(path):
 def parse_args():
     """Parse command line."""
     parser = argparse.ArgumentParser(description='Dataplicity Agent Installer')
+    parser.add_argument('--no-dry', action="store_true", default=False,
+                        help="Do not dry run")
+    parser.add_argument('--non-interactive', action="store_true", default=False,
+                        help="Do not prompt the user")
     args = parser.parse_args()
     log("args={!r}", args)
+
+    if args.no_dry:
+        settings['dry_run'] = False
     return args
 
 
@@ -165,7 +172,8 @@ def run(args):
 
     # ------------------------------------------------------------------
     show_step(4, "starting agent")
-    run_system('service', 'supervisor', 'restart')
+    if not settings['dry_run']:
+        run_system('service', 'supervisor', 'restart')
     # TODO: Poll for version file
 
     # ------------------------------------------------------------------
@@ -268,9 +276,8 @@ def run_system(*command):
     success.
 
     """
-    log('calling {}', ' '.join(command))
-    if settings['dry_run']:
-        return
+    command_line = ' '.join(command)
+    log('run "{}"', command_line)
     try:
         output = subprocess.check_output(command)
         returncode = 0
@@ -278,7 +285,7 @@ def run_system(*command):
         output = e.output
         returncode = e.returncode
     log(output)
-    log('returned={}', returncode)
+    log('"{}" returned={}', command_line, returncode)
     return returncode == 0
 
 
@@ -320,18 +327,23 @@ def create_user():
 
     run_system('useradd', 'dataplicity')
 
+    dataplicity_sudoer =\
+        'dataplicity ALL=(ALL) NOPASSWD: /sbin/reboot'
+
     with open('/etc/sudoers', 'rt') as sudoers_file:
         lines = sudoers_file.read().splitlines()
 
-    dataplicity_sudoer =\
-        'dataplicity ALL=(ALL) NOPASSWD: /sbin/reboot'
+    log('adding "{}" to sudoers', dataplicity_sudoer)
 
     if dataplicity_sudoer in lines:
         log('sudoer line present')
     else:
         log('adding sudoer line')
-        with open('/etc/sudoers', 'at') as sudoers_file:
-            sudoers_file.append("\n{}\n".format(dataplicity_sudoer))
+        try:
+            with open('/etc/sudoers', 'at') as sudoers_file:
+                sudoers_file.append("\n{}\n".format(dataplicity_sudoer))
+        except IOError as e:
+            log('unable to write to sudoers file ({})', e)
 
 
 def congratulations(device_url):
