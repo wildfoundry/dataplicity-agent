@@ -10,3 +10,4 @@ __firmware__
 dist/
 .DS_Store
 bin/
+~*

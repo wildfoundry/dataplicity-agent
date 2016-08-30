@@ -34,6 +34,7 @@ class Client(object):
         try:
             log.info('dataplicity %s', __version__)
             log.info('uname=%s', ' '.join(platform.uname()))
+            log.info('reading conf from %s', self.conf_path)
 
             conf = self.conf = settings.read(self.conf_path)
             if self.rpc_url is None:

@@ -359,7 +359,7 @@ def congratulations(device_url):
 
 # This is a b64encoded version of the agent
 # {% if INSTALLER_DATA %}{% INSTALLER_DATA %}{% else %}
-with open('bin/dataplicity', 'rb') as f:
+with open('dataplicity', 'rb') as f:
     AGENT = base64.b64encode(f.read())
 # {% endif %}
 
