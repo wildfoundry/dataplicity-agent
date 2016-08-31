@@ -67,8 +67,8 @@ class Client(object):
         try:
             self.poll()
             while not self.exit_event.wait(self.poll_rate_seconds):
-                self.poll()
                 self.check_disk_poll()
+                self.poll()
         except SystemExit:
             log.debug('exit requested')
             return
@@ -175,6 +175,7 @@ class Client(object):
                     disk_capacity=meta['disk_capacity'],
                     disk_used=meta['disk_used']
                 )
+                self.can_poll_disk = False
 
     def _check_meta(self, batch):
         """Check previously sent meta information."""
