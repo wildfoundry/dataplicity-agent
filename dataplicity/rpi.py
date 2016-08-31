@@ -1,5 +1,8 @@
 from __future__ import unicode_literals
 
+import psutil
+
+
 RPI_REVISIONS = {
     'Beta': 'rpi_1b',
     '0002': 'rpi_1b',
@@ -53,3 +56,8 @@ def get_machine_type():
         return None
     else:
         return rpi_version
+
+
+def get_disk_space():
+    disk = psutil.disk_usage('/')
+    return disk.total, disk.used

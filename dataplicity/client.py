@@ -47,6 +47,9 @@ class Client(object):
             self.serial = tools.resolve_value(conf.get('device', 'serial'))
             self.auth_token = tools.resolve_value(conf.get('device', 'auth'))
             self.poll_rate_seconds = conf.get_float("daemon", "poll", 60.0)
+            self.disk_poll_rate_seconds = conf.get_integer("daemon", "disk_poll", 60*60)
+            self.can_poll_disk = False
+            self.disk_poll_counter = 0
 
             log.info('api=%s', self.rpc_url)
             log.info('serial=%s', self.serial)
@@ -65,6 +68,7 @@ class Client(object):
             self.poll()
             while not self.exit_event.wait(self.poll_rate_seconds):
                 self.poll()
+                self.check_disk_poll()
         except SystemExit:
             log.debug('exit requested')
             return
@@ -76,10 +80,17 @@ class Client(object):
             self.close()
             log.debug('goodbye')
 
+    def check_disk_poll(self):
+        disk_poll_ratio = self.disk_poll_rate_seconds // self.poll_rate_seconds
+        if self.disk_poll_counter >= disk_poll_ratio:
+            self.can_poll_disk = True
+            self.disk_poll_counter = 0
+
     def poll(self):
         """Called at regulat intervals."""
         t = time.time()
         log.debug('poll t=%.02fs', t)
+        self.disk_poll_counter += 1
         self.sync()
 
     def close(self):
@@ -157,6 +168,13 @@ class Client(object):
                 'device.set_uname',
                 uname=meta['uname']
             )
+            if self.can_poll_disk:
+                batch.call_with_id(
+                    'set_disk_space_result',
+                    'device.set_disk_space',
+                    disk_capacity=meta['disk_capacity'],
+                    disk_used=meta['disk_used']
+                )
 
     def _check_meta(self, batch):
         """Check previously sent meta information."""

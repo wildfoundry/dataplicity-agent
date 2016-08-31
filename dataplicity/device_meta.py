@@ -20,6 +20,7 @@ def get_meta():
     meta['machine_type'] = rpi.get_machine_type()
     meta['os_version'] = get_os_version()
     meta['uname'] = get_uname()
+    meta['disk_capacity'], meta['disk_used'] = rpi.get_disk_space()
     _META_CACHE = meta
     return meta
 
