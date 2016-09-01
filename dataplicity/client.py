@@ -55,7 +55,9 @@ class Client(object):
             log.info('serial=%s', self.serial)
             log.info('poll=%s', self.poll_rate_seconds)
 
-            self.m2m = M2MManager.init_from_conf(self, conf, m2m_url=self.m2m_url)
+            self.m2m = M2MManager.init_from_conf(
+                self, conf, m2m_url=self.m2m_url
+            )
             self.port_forward = PortForwardManager.init_from_conf(self, conf)
 
         except:

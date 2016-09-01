@@ -26,7 +26,7 @@ _logging_level_names = {
 
 
 class App(object):
-    """Dataplicty Agent"""
+    """Dataplicty Agent command line interface."""
 
     def __init__(self):
         self.subcommands = {
@@ -35,6 +35,7 @@ class App(object):
         }
 
     def _make_arg_parser(self):
+        """Make an argument parse object."""
         parser = argparse.ArgumentParser(
             "dataplicity",
             description=self.__doc__
@@ -69,6 +70,7 @@ class App(object):
         return parser
 
     def _init_logging(self):
+        """Initialise logging."""
         format = "%(asctime)s:%(name)s:%(levelname)s: %(message)s"
         datefmt = "[%d/%b/%Y %H:%M:%S]"
         log_level = 'CRITICAL' if self.args.quiet else self.args.log_level.upper()
@@ -83,6 +85,7 @@ class App(object):
                             level=level)
 
     def make_client(self):
+        """Make the client object."""
         path = self.args.conf or constants.CONF_PATH
         client = Client(
             path,
@@ -92,6 +95,7 @@ class App(object):
         return client
 
     def error(self, msg, code=-1):
+        """Display error and exit app."""
         log.critical('app exit ({%s}) code={%s}', msg, code)
         sys.stderr.write(msg + '\n')
         sys.exit(code)

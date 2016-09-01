@@ -11,17 +11,22 @@ from __future__ import unicode_literals
 import argparse
 import base64
 import datetime
+from functools import partial
 import inspect
 import os
 import platform
 import subprocess
+import sys
 import traceback
+import urllib2
 
 settings = {
+    "agent_url": "{{ AGENT_URL }}",
     "agent_version": "{{ VERSION }}",
     "base_dir": "/opt/dataplicity/agent/",
     "m2m_url": "wss://m2m.dataplicity.com",
     "api_url": "https://api.dataplicity.com",
+    "token": "{{ TOKEN }}",
     "dry_run": True,
     "interactive": True
 }
@@ -56,6 +61,10 @@ except IOError:
 install_log = []
 
 
+class AbortInstall(Exception):
+    """Installation can not continue."""
+
+
 def log(text, *args, **kwargs):
     """Logs technical details, not intended for the user."""
     time_str = datetime.datetime.utcnow().ctime()
@@ -86,7 +95,7 @@ def user(text, *args, **kwargs):
     log(log_text)
 
 
-def log_traceback(msg, *args, **kwargs):
+def log_exception(msg, *args, **kwargs):
     """Log a traceback."""
     tb = traceback.format_exc()
     log(msg, *args, **kwargs)
@@ -142,20 +151,18 @@ def main():
     log('install started')
     log('')
 
-    agent_version = settings.agent_version
-    if not ask('Install Dataplicity Agent v{}?'.format(agent_version)):
-        log('canceled')
-        user('No problem. Run the installer at any time!')
-        return
-
     try:
         args = parse_args()
         run(args)
         log('install completed')
+    except AbortInstall as e:
+        log('install aborted ({})', e)
+        user('{}', e)
+        return -1
     except Exception as e:
-        log_traceback('install failed ({})', e)
+        log_exception('install failed ({})', e)
     finally:
-        pass
+        log('done')
 
 
 def run(args):
@@ -163,6 +170,12 @@ def run(args):
 
     user('Welcome to the Dataplicity Agent Installer')
     log_info()
+
+    # ------------------------------------------------------------------
+    agent_version = settings['agent_version']
+    if not ask('Install Dataplicity Agent v{}?'.format(agent_version)):
+        log('canceled')
+        raise AbortInstall('Canceled')
 
     # ------------------------------------------------------------------
     show_step(1, 'extracting agent')
@@ -175,7 +188,7 @@ def run(args):
 
     # ------------------------------------------------------------------
     show_step(2, "registering device")
-    # TODO: register device
+    register_device()
 
     # ------------------------------------------------------------------
     show_step(3, "creating environment")
@@ -252,8 +265,47 @@ def get_executable_path():
     return executable_path
 
 
+def download(url, path):
+    """Download a file from `url` to `path`."""
+    # TODO: progress, md5?
+    url_file = None
+    try:
+        url_file = urllib2.urlopen(url)
+        response_code = url_file.getcode()
+        if response_code != 200:
+            user('unable to open URL {}', url)
+            log('failed to download {} code={}', url, response_code)
+            return False
+
+        bytes_read = 0
+        try:
+            with open(path, 'wb') as write_file:
+                read_chunk = partial(write_file.read, 16384)
+                for chunk in iter(read_chunk, b''):
+                    bytes_read += len(chunk)
+                    write_file.write(chunk)
+        except IOError as e:
+            user('unable to save download ({})', e)
+            log_exception('download failed')
+            return False
+        else:
+            log('{} bytes read', bytes_read)
+
+    except urllib2.URLError as e:
+        log_exception('download error')
+        return False
+
+    finally:
+        if url_file is not None:
+            url_file.close()
+
+    log('downloaded {} to {}', url, path)
+    return True
+
+
 def write_agent(agent_dir, agent_filename):
     """Atomically unpack agent, return agent path."""
+    # TODO: download github release
     agent_bytes = base64.b64decode(AGENT)
     log('decoded agent {} bytes', len(agent_bytes))
 
@@ -261,6 +313,9 @@ def write_agent(agent_dir, agent_filename):
     path = os.path.join(agent_dir, agent_filename)
     path_temp = os.path.join(agent_dir, agent_filename_temp)
     log('writing {}', path_temp)
+
+    if not download(settings['agent_url'], path_temp):
+        raise AbortInstall('unable to download agent')
 
     with open(path_temp, 'wb') as write_file:
         write_file.write(agent_bytes)
@@ -334,6 +389,11 @@ def install_supervisor_conf():
         f.write(conf)
 
 
+def register_device():
+    """Register device with the server."""
+    log('TODO: register device')
+
+
 def create_user():
     """Create a dataplicity user and apply the appropriate permissions."""
 
@@ -373,11 +433,5 @@ def congratulations(device_url):
     )
 
 
-# This is a b64encoded version of the agent
-# {% if INSTALLER_DATA %}{% INSTALLER_DATA %}{% else %}
-with open('bin/dataplicity', 'rb') as f:
-    AGENT = base64.b64encode(f.read())
-# {% endif %}
-
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
