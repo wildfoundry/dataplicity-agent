@@ -48,7 +48,7 @@ class Client(object):
             self.serial = tools.resolve_value(conf.get('device', 'serial'))
             self.auth_token = tools.resolve_value(conf.get('device', 'auth'))
             self.poll_rate_seconds = conf.get_float("daemon", "poll", 60.0)
-            self.disk_poll_rate_seconds = conf.get_integer("daemon", "disk_poll", 60*60)
+            self.disk_poll_rate_seconds = conf.get_integer("daemon", "disk_poll", 60 * 60)
             self.next_disk_poll_time = time.time()
 
             log.info('api=%s', self.rpc_url)
