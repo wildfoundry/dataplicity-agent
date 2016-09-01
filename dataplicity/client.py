@@ -1,8 +1,6 @@
 from __future__ import unicode_literals
 from __future__ import print_function
 
-import datetime
-from datetime import timedelta
 import logging
 import platform
 from threading import Event, Lock
@@ -51,7 +49,7 @@ class Client(object):
             self.auth_token = tools.resolve_value(conf.get('device', 'auth'))
             self.poll_rate_seconds = conf.get_float("daemon", "poll", 60.0)
             self.disk_poll_rate_seconds = conf.get_integer("daemon", "disk_poll", 60*60)
-            self.next_disk_poll_time = datetime.datetime.utcnow()
+            self.next_disk_poll_time = time.time()
 
             log.info('api=%s', self.rpc_url)
             log.info('serial=%s', self.serial)
@@ -82,9 +80,9 @@ class Client(object):
             log.debug('goodbye')
 
     def disk_poll(self):
-        now = datetime.datetime.utcnow()
+        now = time.time()
         if now >= self.next_disk_poll_time:
-            self.next_disk_poll_time = now + timedelta(seconds=self.disk_poll_rate_seconds)
+            self.next_disk_poll_time = now + self.disk_poll_rate_seconds
             disk_capacity, disk_used = get_disk_space()
 
             with self.remote.batch() as batch:
