@@ -1,7 +1,5 @@
 from __future__ import unicode_literals
 
-from .disk_tools import disk_usage
-
 
 RPI_REVISIONS = {
     'Beta': 'rpi_1b',
