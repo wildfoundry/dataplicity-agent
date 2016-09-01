@@ -5,6 +5,7 @@ TODO: Disclaimer
 
 """
 
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -268,6 +269,7 @@ def get_executable_path():
 def download(url, path):
     """Download a file from `url` to `path`."""
     # TODO: progress, md5?
+    log('{} -> {}', url, path)
     url_file = None
     try:
         url_file = urllib2.urlopen(url)
@@ -277,12 +279,15 @@ def download(url, path):
             log('failed to download {} code={}', url, response_code)
             return False
 
+        file_size = int(url_file.info().getheader('Content-Length'))
+
         bytes_read = 0
         try:
             with open(path, 'wb') as write_file:
                 read_chunk = partial(write_file.read, 16384)
                 for chunk in iter(read_chunk, b''):
                     bytes_read += len(chunk)
+                    complete_ratio = bytes_read / file_size
                     write_file.write(chunk)
         except IOError as e:
             user('unable to save download ({})', e)
