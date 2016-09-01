@@ -81,24 +81,28 @@ class Client(object):
 
     def disk_poll(self):
         now = time.time()
-        if now >= self.next_disk_poll_time:
-            self.next_disk_poll_time = now + self.disk_poll_rate_seconds
-            disk_space = disk_usage('/')
 
-            with self.remote.batch() as batch:
-                batch.call_with_id(
-                    'authenticate_result',
-                    'device.check_auth',
-                    device_class='tuxtunnel',
-                    serial=self.serial,
-                    auth_token=self.auth_token
-                )
-                batch.call_with_id(
-                    'set_disk_space_result',
-                    'device.set_disk_space',
-                    disk_capacity=disk_space.total,
-                    disk_used=disk_space.used
-                )
+        try:
+            if now >= self.next_disk_poll_time:
+                self.next_disk_poll_time = now + self.disk_poll_rate_seconds
+                disk_space = disk_usage('/')
+
+                with self.remote.batch() as batch:
+                    batch.call_with_id(
+                        'authenticate_result',
+                        'device.check_auth',
+                        device_class='tuxtunnel',
+                        serial=self.serial,
+                        auth_token=self.auth_token
+                    )
+                    batch.call_with_id(
+                        'set_disk_space_result',
+                        'device.set_disk_space',
+                        disk_capacity=disk_space.total,
+                        disk_used=disk_space.used
+                    )
+        except Exception as e:
+            log.error("disk poll failed %s", e)
 
     def poll(self):
         """Called at regulat intervals."""
