@@ -1,6 +1,6 @@
 from __future__ import unicode_literals
 
-from .disktools import disk_usage
+from .disk_tools import disk_usage
 
 
 RPI_REVISIONS = {
