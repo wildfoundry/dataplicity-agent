@@ -13,9 +13,9 @@ from . import device_meta
 from . import jsonrpc
 from . import settings
 from . import tools
+from .disk_tools import disk_usage
 from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
-from .rpi import get_disk_space
 
 log = logging.getLogger('agent')
 
@@ -83,7 +83,7 @@ class Client(object):
         now = time.time()
         if now >= self.next_disk_poll_time:
             self.next_disk_poll_time = now + self.disk_poll_rate_seconds
-            disk_capacity, disk_used = get_disk_space()
+            disk_space = disk_usage('/')
 
             with self.remote.batch() as batch:
                 batch.call_with_id('authenticate_result',
@@ -95,8 +95,8 @@ class Client(object):
                 batch.call_with_id(
                     'set_disk_space_result',
                     'device.set_disk_space',
-                    disk_capacity=disk_capacity,
-                    disk_used=disk_used
+                    disk_capacity=disk_space.total,
+                    disk_used=disk_space.used
                 )
 
     def poll(self):
