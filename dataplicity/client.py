@@ -1,6 +1,8 @@
 from __future__ import unicode_literals
 from __future__ import print_function
 
+import datetime
+from datetime import timedelta
 import logging
 import platform
 from threading import Event, Lock
@@ -15,6 +17,7 @@ from . import settings
 from . import tools
 from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
+from .rpi import get_disk_space
 
 log = logging.getLogger('agent')
 
@@ -48,8 +51,7 @@ class Client(object):
             self.auth_token = tools.resolve_value(conf.get('device', 'auth'))
             self.poll_rate_seconds = conf.get_float("daemon", "poll", 60.0)
             self.disk_poll_rate_seconds = conf.get_integer("daemon", "disk_poll", 60*60)
-            self.can_poll_disk = False
-            self.disk_poll_counter = 0
+            self.next_disk_poll_time = datetime.datetime.utcnow()
 
             log.info('api=%s', self.rpc_url)
             log.info('serial=%s', self.serial)
@@ -67,7 +69,6 @@ class Client(object):
         try:
             self.poll()
             while not self.exit_event.wait(self.poll_rate_seconds):
-                self.check_disk_poll()
                 self.poll()
         except SystemExit:
             log.debug('exit requested')
@@ -80,17 +81,31 @@ class Client(object):
             self.close()
             log.debug('goodbye')
 
-    def check_disk_poll(self):
-        disk_poll_ratio = self.disk_poll_rate_seconds // self.poll_rate_seconds
-        if self.disk_poll_counter >= disk_poll_ratio:
-            self.can_poll_disk = True
-            self.disk_poll_counter = 0
+    def disk_poll(self):
+        now = datetime.datetime.utcnow()
+        if now >= self.next_disk_poll_time:
+            self.next_disk_poll_time = now + timedelta(seconds=self.disk_poll_rate_seconds)
+            disk_capacity, disk_used = get_disk_space()
+
+            with self.remote.batch() as batch:
+                batch.call_with_id('authenticate_result',
+                                'device.check_auth',
+                                device_class='tuxtunnel',
+                                serial=self.serial,
+                                auth_token=self.auth_token
+                )
+                batch.call_with_id(
+                    'set_disk_space_result',
+                    'device.set_disk_space',
+                    disk_capacity=disk_capacity,
+                    disk_used=disk_used
+                )
 
     def poll(self):
         """Called at regulat intervals."""
         t = time.time()
         log.debug('poll t=%.02fs', t)
-        self.disk_poll_counter += 1
+        self.disk_poll()
         self.sync()
 
     def close(self):
@@ -168,14 +183,6 @@ class Client(object):
                 'device.set_uname',
                 uname=meta['uname']
             )
-            if self.can_poll_disk:
-                batch.call_with_id(
-                    'set_disk_space_result',
-                    'device.set_disk_space',
-                    disk_capacity=meta['disk_capacity'],
-                    disk_used=meta['disk_used']
-                )
-                self.can_poll_disk = False
 
     def _check_meta(self, batch):
         """Check previously sent meta information."""
