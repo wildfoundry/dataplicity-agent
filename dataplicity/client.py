@@ -86,11 +86,12 @@ class Client(object):
             disk_space = disk_usage('/')
 
             with self.remote.batch() as batch:
-                batch.call_with_id('authenticate_result',
-                                'device.check_auth',
-                                device_class='tuxtunnel',
-                                serial=self.serial,
-                                auth_token=self.auth_token
+                batch.call_with_id(
+                    'authenticate_result',
+                    'device.check_auth',
+                    device_class='tuxtunnel',
+                    serial=self.serial,
+                    auth_token=self.auth_token
                 )
                 batch.call_with_id(
                     'set_disk_space_result',
