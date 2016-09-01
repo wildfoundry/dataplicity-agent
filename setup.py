@@ -36,6 +36,7 @@ setup(
     install_requires=[
         'enum34==1.1.6',
         'six==1.10.0',
-        'websocket-client==0.37.0',
-    ]
+    ],
+
+    zip_safe=True
 )

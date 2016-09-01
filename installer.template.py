@@ -12,32 +12,19 @@ import argparse
 import base64
 import datetime
 import inspect
-import json
 import os
 import platform
 import subprocess
 import traceback
 
-# {% if INSTALLER_SETTINGS %} {{ INSTALLER_SETTINGS|safe }} {% else %}
-# What the heck is this, Will?
-# Glad you asked! The comments ensure that this file can
-# run both as a standalone script and as a template.
-# (these comments will not appear in the script we serve)
-#
-# NOTE: This is the ONLY template syntax permitted in this file
-# All new values MUST go in INSTALLER_SETTINGS template variable.
-# (yes, I'm shouting)
-SETTINGS = """
-{
-    "agent_version": "0.4.0",
-    "base_dir": "./__agent__/",
+settings = {
+    "agent_version": "{{ VERSION }}",
+    "base_dir": "/opt/dataplicity/agent/",
     "m2m_url": "wss://m2m.dataplicity.com",
     "api_url": "https://api.dataplicity.com",
-    "dry_run": true
+    "dry_run": True,
+    "interactive": True
 }
-"""
-# {% endif %}
-settings = json.loads(SETTINGS)
 
 SERIAL_PATH = '/opt/dataplicity/tuxtunnel/serial'
 AUTH_PATH = '/opt/dataplicity/tuxtunnel/auth'
@@ -106,6 +93,22 @@ def log_traceback(msg, *args, **kwargs):
     log(tb)
 
 
+def ask(msg, default=True):
+    """Prompt with a message and get a yes / no response."""
+    if not settings['interactive']:
+        return default
+    _msg = "{} (y/n) ".format(msg)
+    log('prompt user: {}', _msg)
+    while True:
+        reply = raw_input(_msg).lower()
+        if reply in ('y', 'yes'):
+            log('user replied YES')
+            return True
+        elif reply in ('n', 'no'):
+            log('user replied NO')
+            return False
+
+
 def make_dir(path):
     """Make a directory if it does not exist."""
     try:
@@ -119,15 +122,17 @@ def make_dir(path):
 def parse_args():
     """Parse command line."""
     parser = argparse.ArgumentParser(description='Dataplicity Agent Installer')
-    parser.add_argument('--no-dry', action="store_true", default=False,
+    parser.add_argument('-n', '--no-dry', action="store_true", default=False,
                         help="Do not dry run")
-    parser.add_argument('--non-interactive', action="store_true", default=False,
+    parser.add_argument('-i', '--non-interactive', action="store_true", default=False,
                         help="Do not prompt the user")
     args = parser.parse_args()
     log("args={!r}", args)
 
     if args.no_dry:
         settings['dry_run'] = False
+    if args.non_interactive:
+        settings['interactive'] = False
     return args
 
 
@@ -136,6 +141,13 @@ def main():
     log('-' * 70)
     log('install started')
     log('')
+
+    agent_version = settings.agent_version
+    if not ask('Install Dataplicity Agent v{}?'.format(agent_version)):
+        log('canceled')
+        user('No problem. Run the installer at any time!')
+        return
+
     try:
         args = parse_args()
         run(args)
@@ -162,16 +174,20 @@ def run(args):
     make_executable(agent_path)
 
     # ------------------------------------------------------------------
-    show_step(2, "creating environment")
+    show_step(2, "registering device")
+    # TODO: register device
+
+    # ------------------------------------------------------------------
+    show_step(3, "creating environment")
     create_user()
 
     # ------------------------------------------------------------------
-    show_step(3, "installing supervisor")
+    show_step(4, "installing supervisor")
     apt_get('supervisor')
     install_supervisor_conf()
 
     # ------------------------------------------------------------------
-    show_step(4, "starting agent")
+    show_step(5, "starting agent")
     if not settings['dry_run']:
         run_system('service', 'supervisor', 'restart')
     # TODO: Poll for version file
@@ -359,7 +375,7 @@ def congratulations(device_url):
 
 # This is a b64encoded version of the agent
 # {% if INSTALLER_DATA %}{% INSTALLER_DATA %}{% else %}
-with open('dataplicity', 'rb') as f:
+with open('bin/dataplicity', 'rb') as f:
     AGENT = base64.b64encode(f.read())
 # {% endif %}
 

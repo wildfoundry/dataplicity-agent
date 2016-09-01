@@ -167,14 +167,14 @@ class M2MManager(object):
         return self.connect_thread.m2m_client
 
     @classmethod
-    def init_from_conf(cls, client, conf):
+    def init_from_conf(cls, client, conf, m2m_url=None):
         # m2m is now on by default
         enabled = conf.get('m2m', 'enabled', 'yes') == 'yes'
         if not enabled:
             log.debug('m2m is not enabled')
             return None
 
-        url = conf.get('m2m', 'url', constants.M2M_URL)
+        url = m2m_url or conf.get('m2m', 'url', constants.M2M_URL)
         if url is None:
             log.debug('m2m not used')
             return None

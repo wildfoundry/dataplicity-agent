@@ -22,9 +22,10 @@ log = logging.getLogger('agent')
 class Client(object):
     """Dataplicity client."""
 
-    def __init__(self, conf_path, rpc_url=None):
+    def __init__(self, conf_path, rpc_url=None, m2m_url=None):
         self.conf_path = conf_path
         self.rpc_url = rpc_url
+        self.m2m_url = m2m_url
         self._sync_lock = Lock()
         self._sent_meta = False
         self.exit_event = Event()
@@ -49,11 +50,12 @@ class Client(object):
             self.auth_token = tools.resolve_value(conf.get('device', 'auth'))
             self.poll_rate_seconds = conf.get_float("daemon", "poll", 60.0)
 
+            log.info('m2m=%s', self.m2m_url)
             log.info('api=%s', self.rpc_url)
             log.info('serial=%s', self.serial)
             log.info('poll=%s', self.poll_rate_seconds)
 
-            self.m2m = M2MManager.init_from_conf(self, conf)
+            self.m2m = M2MManager.init_from_conf(self, conf, m2m_url=self.m2m_url)
             self.port_forward = PortForwardManager.init_from_conf(self, conf)
 
         except:

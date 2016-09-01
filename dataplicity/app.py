@@ -50,6 +50,8 @@ class App(object):
                             help="the location of the conf file to load")
         parser.add_argument('-s', '--server-url', metavar="URL", dest="server_url", default=None,
                             help="URL of dataplicity.com api")
+        parser.add_argument('-m', '--m2m-url', metavar="WS URL", dest="m2m_url", default=None,
+                            help="URL of m2m server (should start with ws:// or wss://")
         parser.add_argument('-q', '--quiet', action="store_true", default=False,
                             help="hide output")
 
@@ -84,7 +86,8 @@ class App(object):
         path = self.args.conf or constants.CONF_PATH
         client = Client(
             path,
-            rpc_url=self.args.server_url
+            rpc_url=self.args.server_url,
+            m2m_url=self.args.m2m_url
         )
         return client
 
