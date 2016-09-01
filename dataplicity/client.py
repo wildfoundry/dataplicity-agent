@@ -13,6 +13,7 @@ from . import device_meta
 from . import jsonrpc
 from . import settings
 from . import tools
+from .disk_tools import disk_usage
 from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
 
@@ -47,6 +48,8 @@ class Client(object):
             self.serial = tools.resolve_value(conf.get('device', 'serial'))
             self.auth_token = tools.resolve_value(conf.get('device', 'auth'))
             self.poll_rate_seconds = conf.get_float("daemon", "poll", 60.0)
+            self.disk_poll_rate_seconds = conf.get_integer("daemon", "disk_poll", 60 * 60)
+            self.next_disk_poll_time = time.time()
 
             log.info('api=%s', self.rpc_url)
             log.info('serial=%s', self.serial)
@@ -76,10 +79,36 @@ class Client(object):
             self.close()
             log.debug('goodbye')
 
+    def disk_poll(self):
+        now = time.time()
+
+        if now >= self.next_disk_poll_time:
+            self.next_disk_poll_time = now + self.disk_poll_rate_seconds
+            disk_space = disk_usage('/')
+
+            with self.remote.batch() as batch:
+                batch.call_with_id(
+                    'authenticate_result',
+                    'device.check_auth',
+                    device_class='tuxtunnel',
+                    serial=self.serial,
+                    auth_token=self.auth_token
+                )
+                batch.call_with_id(
+                    'set_disk_space_result',
+                    'device.set_disk_space',
+                    disk_capacity=disk_space.total,
+                    disk_used=disk_space.used
+                )
+
     def poll(self):
         """Called at regulat intervals."""
         t = time.time()
         log.debug('poll t=%.02fs', t)
+        try:
+            self.disk_poll()
+        except Exception as e:
+            log.error("disk poll failed %s", e)
         self.sync()
 
     def close(self):
