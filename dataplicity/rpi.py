@@ -1,6 +1,6 @@
 from __future__ import unicode_literals
 
-import psutil
+from .disktools import disk_usage
 
 
 RPI_REVISIONS = {
@@ -59,5 +59,5 @@ def get_machine_type():
 
 
 def get_disk_space():
-    disk = psutil.disk_usage('/')
+    disk = disk_usage('/')
     return disk.total, disk.used
