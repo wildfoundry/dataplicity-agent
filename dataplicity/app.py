@@ -8,7 +8,7 @@ import sys
 from . import __version__
 from . import subcommand
 from .client import Client
-from .subcommands import install, registersamplers, report, run
+from .subcommands import install, registersamplers, report, run, version
 from . import constants
 
 log = logging.getLogger('app')
@@ -41,7 +41,8 @@ class App(object):
             description=self.__doc__
         )
 
-        parser.add_argument('-v', '--version', action="version", version=__version__,
+        _version = "dataplicity agent v{}".format(__version__)
+        parser.add_argument('-v', '--version', action="version", version=_version,
                             help="Display version and exit")
         parser.add_argument('--log-level', metavar='LEVEL', default='INFO',
                             help="Set log level (INFO or WARNING or ERROR or DEBUG)")

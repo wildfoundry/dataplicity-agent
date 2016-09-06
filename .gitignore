@@ -1,5 +1,6 @@
 _build
 build
+.build
 __firmware__
 .buildinfo
 .doctrees
