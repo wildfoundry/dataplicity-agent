@@ -1,4 +1,4 @@
-(c) 2014, WildFoundry Limited (UK Company No: 08045924)
+Copyright WildFoundry Limited (UK Company No: 08045924)
 This license is an extended version of a BSD license.
 All rights reserved.
 
