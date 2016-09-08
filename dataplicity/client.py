@@ -11,7 +11,6 @@ from _version import __version__
 from . import constants
 from . import device_meta
 from . import jsonrpc
-from . import settings
 from . import tools
 from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
@@ -22,8 +21,7 @@ log = logging.getLogger('agent')
 class Client(object):
     """Dataplicity client."""
 
-    def __init__(self, conf_path, rpc_url=None, m2m_url=None):
-        self.conf_path = conf_path
+    def __init__(self, rpc_url=None, m2m_url=None):
         self.rpc_url = rpc_url
         self.m2m_url = m2m_url
         self._sync_lock = Lock()
@@ -35,30 +33,22 @@ class Client(object):
         try:
             log.info('dataplicity %s', __version__)
             log.info('uname=%s', ' '.join(platform.uname()))
-            log.info('reading conf from %s', self.conf_path)
 
-            conf = self.conf = settings.read(self.conf_path)
             if self.rpc_url is None:
-                self.rpc_url = conf.get(
-                    'server',
-                    'url',
-                    constants.SERVER_URL
-                )
+                self.rpc_url = constants.SERVER_URL
 
             self.remote = jsonrpc.JSONRPC(self.rpc_url)
-            self.serial = tools.resolve_value(conf.get('device', 'serial'))
-            self.auth_token = tools.resolve_value(conf.get('device', 'auth'))
-            self.poll_rate_seconds = conf.get_float("daemon", "poll", 60.0)
+            self.serial = tools.resolve_value(constants.SERIAL_LOCATION)
+            self.auth_token = tools.resolve_value(constants.AUTH_LOCATION)
+            self.poll_rate_seconds = 60
 
             log.info('m2m=%s', self.m2m_url)
             log.info('api=%s', self.rpc_url)
             log.info('serial=%s', self.serial)
             log.info('poll=%s', self.poll_rate_seconds)
 
-            self.m2m = M2MManager.init_from_conf(
-                self, conf, m2m_url=self.m2m_url
-            )
-            self.port_forward = PortForwardManager.init_from_conf(self, conf)
+            self.m2m = M2MManager.init(self, m2m_url=self.m2m_url)
+            self.port_forward = PortForwardManager.init(self)
 
         except:
             log.exception('failed to initialize client')

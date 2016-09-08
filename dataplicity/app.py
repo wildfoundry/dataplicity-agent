@@ -48,8 +48,6 @@ class App(object):
                             help="Set log level (INFO or WARNING or ERROR or DEBUG)")
         parser.add_argument('-d', '--debug', action="store_true", dest="debug", default=False,
                             help="Enables debug output")
-        parser.add_argument('-c', '--conf', metavar="PATH", dest="conf", default=None,
-                            help="the location of the conf file to load")
         parser.add_argument('-s', '--server-url', metavar="URL", dest="server_url", default=None,
                             help="URL of dataplicity.com api")
         parser.add_argument('-m', '--m2m-url', metavar="WS URL", dest="m2m_url", default=None,
@@ -87,9 +85,7 @@ class App(object):
 
     def make_client(self):
         """Make the client object."""
-        path = self.args.conf or constants.CONF_PATH
         client = Client(
-            path,
             rpc_url=self.args.server_url,
             m2m_url=self.args.m2m_url
         )
