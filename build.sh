@@ -15,4 +15,4 @@ pip -q install pex==1.1.14
 echo building ./bin/dataplicity
 pex dataplicity -r requirements.txt -o bin/dataplicity -m dataplicity.app:main
 deactivate
-echo build dataplicity agent v`./bin/dataplicity version`
+echo built dataplicity agent v`./bin/dataplicity version`
