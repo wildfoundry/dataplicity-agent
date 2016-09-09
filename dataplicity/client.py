@@ -143,6 +143,7 @@ class Client(object):
                     batch.abandon()
 
             if batch.sent:
+                log.debug('meta sent')
                 # get_result will throw exceptions with (hopefully) helpful
                 # error messages if they fail
                 batch.get_result('authenticate_result')
@@ -159,6 +160,7 @@ class Client(object):
 
         try:
             meta = device_meta.get_meta()
+            log.debug("syncing meta %r", meta)
         except:
             log.exception('error getting meta')
         else:
@@ -185,6 +187,7 @@ class Client(object):
 
     def _check_meta(self, batch):
         """Check previously sent meta information."""
+        log.debug('checking meta')
         if self._sent_meta:
             return
         try:
@@ -195,10 +198,11 @@ class Client(object):
                 'set_uname_result'
             )
         except Exception as e:
-            self.log.warning('failed to set device meta (%s)', e)
+            log.warning('failed to set device meta (%s)', e)
         else:
             # Success! Don't send again.
             self._sent_meta = True
+            log.debug('sent meta')
 
     def set_m2m_identity(self, identity):
         """
@@ -207,7 +211,7 @@ class Client(object):
         """
         if self.auth_token is None:
             if not self.disable_sync:
-                self.log.debug("skipping m2m identity notify because we don't have an auth token")
+                log.debug("skipping m2m identity notify because we don't have an auth token")
             return None
 
         try:
