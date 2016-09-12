@@ -140,6 +140,7 @@ class Client(object):
                     sync_id=sync_id
                 )
                 if not self._sync_meta(batch):
+                    log.debug('sync abandoned')
                     batch.abandon()
 
             if batch.sent:
@@ -189,6 +190,7 @@ class Client(object):
         """Check previously sent meta information."""
         log.debug('checking meta')
         if self._sent_meta:
+            log.debug('meta was previously sent')
             return
         try:
             batch.check(
