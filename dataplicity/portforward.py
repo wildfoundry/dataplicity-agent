@@ -273,6 +273,7 @@ class PortForwardManager(object):
         manager.add_service('ext', 81)
         manager.add_service('extalt', 8000)
         manager.add_service('alt', 8080)
+        return manager
 
     @property
     def close_event(self):
