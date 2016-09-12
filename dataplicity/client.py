@@ -130,35 +130,26 @@ class Client(object):
         start = time.time()
         sync_id = self.make_sync_id()
         try:
-            with self.remote.batch() as batch:
-                batch.call_with_id(
-                    'authenticate_result',
-                    'device.check_auth',
-                    device_class='tuxtunnel',
-                    serial=self.serial,
-                    auth_token=self.auth_token,
-                    sync_id=sync_id
-                )
-                if not self._sync_meta(batch):
-                    log.debug('sync abandoned')
-                    batch.abandon()
-
-            if batch.sent:
-                log.debug('meta sent')
-                # get_result will throw exceptions with (hopefully) helpful
-                # error messages if they fail
+            if not self._sent_meta:
+                with self.remote.batch() as batch:
+                    batch.call_with_id(
+                        'authenticate_result',
+                        'device.check_auth',
+                        device_class='tuxtunnel',
+                        serial=self.serial,
+                        auth_token=self.auth_token,
+                        sync_id=sync_id
+                    )
+                    self._sync_meta(batch)
                 batch.get_result('authenticate_result')
                 self._check_meta(batch)
 
         finally:
-            ellapsed = time.time() - start
-            log.debug('sync complete %0.2fs', ellapsed)
+            elapsed = time.time() - start
+            log.debug('sync complete %0.2fs', elapsed)
 
     def _sync_meta(self, batch):
         """Sync meta information regarding host device."""
-        if self._sent_meta:
-            return False
-
         try:
             meta = device_meta.get_meta()
             log.debug("syncing meta %r", meta)
