@@ -22,8 +22,8 @@ class Client(object):
     """Dataplicity client."""
 
     def __init__(self, rpc_url=None, m2m_url=None):
-        self.rpc_url = rpc_url
-        self.m2m_url = m2m_url
+        self.rpc_url = rpc_url or constants.SERVER_URL
+        self.m2m_url = m2m_url or constants.M2M_URL
         self._sync_lock = Lock()
         self._sent_meta = False
         self.exit_event = Event()
@@ -41,14 +41,9 @@ class Client(object):
             log.info('dataplicity %s', __version__)
             log.info('uname=%s', ' '.join(platform.uname()))
 
-            if self.rpc_url is None:
-                self.rpc_url = constants.SERVER_URL
-
             self.remote = jsonrpc.JSONRPC(self.rpc_url)
-
             self.serial = self._read(constants.SERIAL_LOCATION)
             self.auth_token = self._read(constants.AUTH_LOCATION)
-
             self.poll_rate_seconds = 60
             self.disk_poll_rate_seconds = 60 * 60
             self.next_disk_poll_time = time.time()
