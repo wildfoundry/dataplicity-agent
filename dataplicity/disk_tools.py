@@ -6,6 +6,7 @@ import sys
 
 sdiskusage = namedtuple('sdiskusage', ['total', 'used', 'free', 'percent'])
 
+
 def usage_percent(used, total, _round=None):
     """Calculate percentage usage of 'used' against 'total'."""
     try:

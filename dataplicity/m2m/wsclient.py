@@ -1,7 +1,6 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
-
 import logging
 import socket
 import ssl
@@ -9,13 +8,14 @@ import sys
 import threading
 from collections import defaultdict, deque
 
+import websocket
+
 from . import bencode
 from . import packets
 from ..compat import text_type
 from .dispatcher import Dispatcher, expose
 from .packets import M2MPacket as Packet
 from .packets import PacketType
-from . import websocket
 
 log = logging.getLogger('m2m')
 server_log = logging.getLogger('m2m.server')

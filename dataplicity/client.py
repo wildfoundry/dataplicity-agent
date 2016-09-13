@@ -11,7 +11,6 @@ from _version import __version__
 from . import constants
 from . import device_meta
 from . import jsonrpc
-from . import tools
 from .disk_tools import disk_usage
 from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
@@ -30,6 +29,13 @@ class Client(object):
         self.exit_event = Event()
         self._init()
 
+    @classmethod
+    def _read(cls, path):
+        """Read contents of a file."""
+        with open(path, 'rt') as fh:
+            data = fh.read()
+        return data
+
     def _init(self):
         try:
             log.info('dataplicity %s', __version__)
@@ -40,8 +46,9 @@ class Client(object):
 
             self.remote = jsonrpc.JSONRPC(self.rpc_url)
 
-            self.serial = tools.resolve_value(constants.SERIAL_LOCATION)
-            self.auth_token = tools.resolve_value(constants.AUTH_LOCATION)
+            self.serial = self._read(constants.SERIAL_LOCATION)
+            self.auth_token = self._read(constants.AUTH_LOCATION)
+
             self.poll_rate_seconds = 60
             self.disk_poll_rate_seconds = 60 * 60
             self.next_disk_poll_time = time.time()

@@ -1,4 +1,4 @@
-"""A M2M servers that returns data sent to it. May be used as a heart-beat."""
+"""A M2M service that returns data sent to it. May be used as a heart-beat."""
 
 from __future__ import print_function
 from __future__ import unicode_literals

@@ -8,8 +8,7 @@ import sys
 from . import __version__
 from . import subcommand
 from .client import Client
-from .subcommands import install, registersamplers, report, run, version
-from . import constants
+from .subcommands import run, version
 
 log = logging.getLogger('app')
 
@@ -116,6 +115,7 @@ class App(object):
             debug_cmd = ' '.join([cmd, '--debug'] + sys.argv[1:])
             sys.stderr.write("(run '{}' for a full traceback)\n".format(debug_cmd))
             return -1
+
 
 def main():
     """Dataplicity Agent entry point."""
