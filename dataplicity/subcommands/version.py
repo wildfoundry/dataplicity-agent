@@ -8,7 +8,7 @@ import sys
 
 
 class Version(SubCommand):
-    """Run the dataplicity service in the foreground"""
+    """Write version to stdout."""
     help = """Write version to stdout."""
 
     def run(self):
