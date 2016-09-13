@@ -2,7 +2,7 @@
 
 read -p "Build dataplicity agent from PyPi? " -n 1 -r
 echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]
+if [[ ! "$REPLY" =~ ^[Yy]$ ]]
 then
     exit 1
 fi
