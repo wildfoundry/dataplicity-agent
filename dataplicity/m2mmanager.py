@@ -9,7 +9,7 @@ import threading
 
 from . import constants
 from .m2m import WSClient, EchoService
-from dataplicity.m2m.remoteprocess import RemoteProcess
+from .m2m.remoteprocess import RemoteProcess
 
 
 log = logging.getLogger('m2m')
@@ -167,12 +167,14 @@ class M2MManager(object):
 
     @classmethod
     def init(cls, client, m2m_url=None):
+        """Set up the m2m manager for Dataplicity."""
         url = m2m_url or constants.M2M_URL
         manager = cls(client, url)
         manager.add_terminal('shell', 'bash -i')
         return manager
 
     def on_client_close(self):
+        """Client is closing, shutdown all terminals."""
         for terminal in self.terminals.values():
             terminal.close()
 
@@ -203,9 +205,11 @@ class M2MManager(object):
         self.terminals[name] = Terminal(name, remote_process, user=user, group=group)
 
     def get_terminal(self, name):
+        """Get a named terminal."""
         return self.terminals.get(name, None)
 
     def on_instruction(self, sender, data):
+        """Instructions sent by privileged client."""
         log.debug("instruction %r from %s", data, sender)
         action = data['action']
         if action == 'sync':
@@ -225,8 +229,10 @@ class M2MManager(object):
         elif action == 'reboot-device':
             log.debug('reboot requested')
             self.reboot()
+        # Unrecognized instructions are ignored
 
     def open_terminal(self, name, port, size=None):
+        """Open a new terminal."""
         terminal = self.get_terminal(name)
         if terminal is None:
             log.warning("no terminal called '%s'", name)
@@ -234,10 +240,12 @@ class M2MManager(object):
         terminal.launch(self.m2m_client.get_channel(port), size=size)
 
     def open_echo_service(self, port):
+        """Open an echo service (ping)."""
         log.debug('opening echo service on m2m port %s', port)
         EchoService(self.m2m_client.get_channel(port))
 
     def open_portforward(self, service, route):
+        """Open a port forward service."""
         self.client.port_forward.open_service(service, route)
 
     def reboot(self):

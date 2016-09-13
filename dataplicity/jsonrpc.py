@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 import json
 import logging
 
-from dataplicity.compat import urlopen, text_type
+from .compat import urlopen, text_type
 
 
 log = logging.getLogger('dataplicity')

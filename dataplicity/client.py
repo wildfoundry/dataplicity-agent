@@ -100,7 +100,7 @@ class Client(object):
                 )
 
     def poll(self):
-        """Called at regulat intervals."""
+        """Called at regular intervals."""
         t = time.time()
         log.debug('poll t=%.02fs', t)
         try:
@@ -122,6 +122,7 @@ class Client(object):
         return sync_id
 
     def sync(self):
+        """Sync with server."""
         try:
             with self._sync_lock:
                 self._sync()
@@ -129,6 +130,9 @@ class Client(object):
             log.error("sync failed %s", e)
 
     def _sync(self):
+        """Perform sync."""
+        # Syncing is a much simpler process in Dataplicity agent,
+        # than previous versions.
         start = time.time()
         sync_id = self.make_sync_id()
         try:
@@ -203,6 +207,7 @@ class Client(object):
         """
         Tell the server of our m2m identity, return the identity if it was set,
         or None if it could not be set.
+
         """
         if self.auth_token is None:
             if not self.disable_sync:
