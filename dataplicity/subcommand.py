@@ -1,7 +1,7 @@
 from __future__ import unicode_literals
 from __future__ import print_function
 
-from dataplicity.compat import with_metaclass
+from .compat import with_metaclass
 
 
 registry = {}

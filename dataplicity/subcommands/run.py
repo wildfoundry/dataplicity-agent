@@ -8,9 +8,6 @@ class Run(SubCommand):
     """Run the dataplicity service in the foreground"""
     help = """Run dataplicity agent"""
 
-    def add_arguments(self, parser):
-        return parser
-
     def run(self):
         client = self.app.make_client()
         client.run_forever()

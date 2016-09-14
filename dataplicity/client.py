@@ -11,8 +11,6 @@ from _version import __version__
 from . import constants
 from . import device_meta
 from . import jsonrpc
-from . import settings
-from . import tools
 from .disk_tools import disk_usage
 from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
@@ -23,40 +21,40 @@ log = logging.getLogger('agent')
 class Client(object):
     """Dataplicity client."""
 
-    def __init__(self, conf_path, rpc_url=None):
-        self.conf_path = conf_path
-        self.rpc_url = rpc_url
+    def __init__(self, rpc_url=None, m2m_url=None):
+        self.rpc_url = rpc_url or constants.SERVER_URL
+        self.m2m_url = m2m_url or constants.M2M_URL
         self._sync_lock = Lock()
         self._sent_meta = False
         self.exit_event = Event()
         self._init()
+
+    @classmethod
+    def _read(cls, path):
+        """Read contents of a file."""
+        with open(path, 'rt') as fh:
+            data = fh.read()
+        return data
 
     def _init(self):
         try:
             log.info('dataplicity %s', __version__)
             log.info('uname=%s', ' '.join(platform.uname()))
 
-            conf = self.conf = settings.read(self.conf_path)
-            if self.rpc_url is None:
-                self.rpc_url = conf.get(
-                    'server',
-                    'url',
-                    constants.SERVER_URL
-                )
-
             self.remote = jsonrpc.JSONRPC(self.rpc_url)
-            self.serial = tools.resolve_value(conf.get('device', 'serial'))
-            self.auth_token = tools.resolve_value(conf.get('device', 'auth'))
-            self.poll_rate_seconds = conf.get_float("daemon", "poll", 60.0)
-            self.disk_poll_rate_seconds = conf.get_integer("daemon", "disk_poll", 60 * 60)
+            self.serial = self._read(constants.SERIAL_LOCATION)
+            self.auth_token = self._read(constants.AUTH_LOCATION)
+            self.poll_rate_seconds = 60
+            self.disk_poll_rate_seconds = 60 * 60
             self.next_disk_poll_time = time.time()
 
+            log.info('m2m=%s', self.m2m_url)
             log.info('api=%s', self.rpc_url)
             log.info('serial=%s', self.serial)
             log.info('poll=%s', self.poll_rate_seconds)
 
-            self.m2m = M2MManager.init_from_conf(self, conf)
-            self.port_forward = PortForwardManager.init_from_conf(self, conf)
+            self.m2m = M2MManager.init(self, m2m_url=self.m2m_url)
+            self.port_forward = PortForwardManager.init(self)
 
         except:
             log.exception('failed to initialize client')
@@ -102,7 +100,7 @@ class Client(object):
                 )
 
     def poll(self):
-        """Called at regulat intervals."""
+        """Called at regular intervals."""
         t = time.time()
         log.debug('poll t=%.02fs', t)
         try:
@@ -124,6 +122,7 @@ class Client(object):
         return sync_id
 
     def sync(self):
+        """Sync with server."""
         try:
             with self._sync_lock:
                 self._sync()
@@ -131,38 +130,35 @@ class Client(object):
             log.error("sync failed %s", e)
 
     def _sync(self):
+        """Perform sync."""
+        # Syncing is a much simpler process in Dataplicity agent,
+        # than previous versions.
         start = time.time()
         sync_id = self.make_sync_id()
         try:
-            with self.remote.batch() as batch:
-                batch.call_with_id(
-                    'authenticate_result',
-                    'device.check_auth',
-                    device_class='tuxtunnel',
-                    serial=self.serial,
-                    auth_token=self.auth_token,
-                    sync_id=sync_id
-                )
-                if not self._sync_meta(batch):
-                    batch.abandon()
-
-            if batch.sent:
-                # get_result will throw exceptions with (hopefully) helpful
-                # error messages if they fail
+            if not self._sent_meta:
+                with self.remote.batch() as batch:
+                    batch.call_with_id(
+                        'authenticate_result',
+                        'device.check_auth',
+                        device_class='tuxtunnel',
+                        serial=self.serial,
+                        auth_token=self.auth_token,
+                        sync_id=sync_id
+                    )
+                    self._sync_meta(batch)
                 batch.get_result('authenticate_result')
                 self._check_meta(batch)
 
         finally:
-            ellapsed = time.time() - start
-            log.debug('sync complete %0.2fs', ellapsed)
+            elapsed = time.time() - start
+            log.debug('sync complete %0.2fs', elapsed)
 
     def _sync_meta(self, batch):
         """Sync meta information regarding host device."""
-        if self._sent_meta:
-            return False
-
         try:
             meta = device_meta.get_meta()
+            log.debug("syncing meta %r", meta)
         except:
             log.exception('error getting meta')
         else:
@@ -189,7 +185,9 @@ class Client(object):
 
     def _check_meta(self, batch):
         """Check previously sent meta information."""
+        log.debug('checking meta')
         if self._sent_meta:
+            log.debug('meta was previously sent')
             return
         try:
             batch.check(
@@ -199,19 +197,21 @@ class Client(object):
                 'set_uname_result'
             )
         except Exception as e:
-            self.log.warning('failed to set device meta (%s)', e)
+            log.warning('failed to set device meta (%s)', e)
         else:
             # Success! Don't send again.
             self._sent_meta = True
+            log.debug('sent meta')
 
     def set_m2m_identity(self, identity):
         """
         Tell the server of our m2m identity, return the identity if it was set,
         or None if it could not be set.
+
         """
         if self.auth_token is None:
             if not self.disable_sync:
-                self.log.debug("skipping m2m identity notify because we don't have an auth token")
+                log.debug("skipping m2m identity notify because we don't have an auth token")
             return None
 
         try:

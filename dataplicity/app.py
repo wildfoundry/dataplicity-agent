@@ -8,8 +8,7 @@ import sys
 from . import __version__
 from . import subcommand
 from .client import Client
-from .subcommands import install, registersamplers, report, run
-from . import constants
+from .subcommands import run, version
 
 log = logging.getLogger('app')
 
@@ -26,7 +25,7 @@ _logging_level_names = {
 
 
 class App(object):
-    """Dataplicty Agent"""
+    """Dataplicty Agent command line interface."""
 
     def __init__(self):
         self.subcommands = {
@@ -35,21 +34,23 @@ class App(object):
         }
 
     def _make_arg_parser(self):
+        """Make an argument parse object."""
         parser = argparse.ArgumentParser(
             "dataplicity",
             description=self.__doc__
         )
 
-        parser.add_argument('-v', '--version', action="version", version=__version__,
+        _version = "dataplicity agent v{}".format(__version__)
+        parser.add_argument('-v', '--version', action="version", version=_version,
                             help="Display version and exit")
         parser.add_argument('--log-level', metavar='LEVEL', default='INFO',
                             help="Set log level (INFO or WARNING or ERROR or DEBUG)")
         parser.add_argument('-d', '--debug', action="store_true", dest="debug", default=False,
                             help="Enables debug output")
-        parser.add_argument('-c', '--conf', metavar="PATH", dest="conf", default=None,
-                            help="the location of the conf file to load")
         parser.add_argument('-s', '--server-url', metavar="URL", dest="server_url", default=None,
                             help="URL of dataplicity.com api")
+        parser.add_argument('-m', '--m2m-url', metavar="WS URL", dest="m2m_url", default=None,
+                            help="URL of m2m server (should start with ws:// or wss://")
         parser.add_argument('-q', '--quiet', action="store_true", default=False,
                             help="hide output")
 
@@ -67,6 +68,7 @@ class App(object):
         return parser
 
     def _init_logging(self):
+        """Initialise logging."""
         format = "%(asctime)s:%(name)s:%(levelname)s: %(message)s"
         datefmt = "[%d/%b/%Y %H:%M:%S]"
         log_level = 'CRITICAL' if self.args.quiet else self.args.log_level.upper()
@@ -81,14 +83,15 @@ class App(object):
                             level=level)
 
     def make_client(self):
-        path = self.args.conf or constants.CONF_PATH
+        """Make the client object."""
         client = Client(
-            path,
-            rpc_url=self.args.server_url
+            rpc_url=self.args.server_url,
+            m2m_url=self.args.m2m_url
         )
         return client
 
     def error(self, msg, code=-1):
+        """Display error and exit app."""
         log.critical('app exit ({%s}) code={%s}', msg, code)
         sys.stderr.write(msg + '\n')
         sys.exit(code)
@@ -112,6 +115,7 @@ class App(object):
             debug_cmd = ' '.join([cmd, '--debug'] + sys.argv[1:])
             sys.stderr.write("(run '{}' for a full traceback)\n".format(debug_cmd))
             return -1
+
 
 def main():
     """Dataplicity Agent entry point."""

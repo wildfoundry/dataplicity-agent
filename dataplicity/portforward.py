@@ -267,15 +267,12 @@ class PortForwardManager(object):
         return self.client.m2m if self.client else None
 
     @classmethod
-    def init_from_conf(cls, client, conf):
-        """Initialise PF from dataplicity.conf."""
-        # TODO: deprecated in dpagent
-        manager = PortForwardManager(client)
-        for section, name in conf.qualified_sections('portforward'):
-            if not conf.get_bool(section, 'enabled', True):
-                continue
-            port = conf.get_integer(section, 'port', 80)
-            manager.add_service(name, port)
+    def init(cls, client):
+        manager = cls(client)
+        manager.add_service('web', 80)
+        manager.add_service('ext', 81)
+        manager.add_service('extalt', 8000)
+        manager.add_service('alt', 8080)
         return manager
 
     @property

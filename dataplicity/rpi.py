@@ -1,3 +1,8 @@
+"""
+Raspberry Pi specific tools.
+
+"""
+
 from __future__ import unicode_literals
 
 
