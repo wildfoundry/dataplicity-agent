@@ -31,9 +31,9 @@ class Client(object):
 
     @classmethod
     def _read(cls, path):
-        """Read contents of a file."""
+        """Read contents of a file, strip whitespace."""
         with open(path, 'rt') as fh:
-            data = fh.read()
+            data = fh.read().strip()
         return data
 
     def _init(self):
