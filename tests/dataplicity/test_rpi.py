@@ -45,6 +45,8 @@ class MockOpenContext(object):
 
 
 def test_get_machine_type():
+    """ test for get_machine_type function
+    """
 
     def mock_open(file_contents):
         """ mock for open() for a situation where the file does exist.
@@ -60,9 +62,12 @@ def test_get_machine_type():
         """
         raise IOError
 
+    def builtin_open_name():
+        return '{}.open'.format(six.moves.builtins.__name__)
+
     for rev, expected_value in RPI_REVISIONS.iteritems():
         with patch(
-            '%s.open' % six.moves.builtins.__name__,
+            builtin_open_name(),
             mock_open(REVISION_TEMPLATE % rev),
             create=True
         ):
@@ -70,7 +75,7 @@ def test_get_machine_type():
 
     # if the file doesn't exist, the version should be None
     with patch(
-        '__builtin__.open',
+        builtin_open_name(),
         mock_open_ioerror,
         create=True
     ):
