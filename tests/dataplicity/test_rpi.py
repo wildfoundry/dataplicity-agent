@@ -14,7 +14,7 @@ REVISION_TEMPLATE = 'Revision: %s'
 """
 
 
-class FileContentIterator:
+class FileContentIterator(six.Iterator):
     """ this is a replacement for mock_open which supports iterations.
     """
     def __init__(self, file_contents):
@@ -24,7 +24,7 @@ class FileContentIterator:
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         if self.index < len(self.file_contents):
             self.index += 1
             return self.file_contents[self.index - 1]
