@@ -7,7 +7,7 @@ from __future__ import unicode_literals
 
 
 RPI_REVISIONS = {
-    'Beta': 'rpi_1b',
+    'beta': 'rpi_1b',
     '0002': 'rpi_1b',
     '0003': 'rpi_1b',
     '0004': 'rpi_1b',
