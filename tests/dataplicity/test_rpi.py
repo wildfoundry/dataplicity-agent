@@ -65,7 +65,7 @@ def test_get_machine_type():
     def builtin_open_name():
         return '{}.open'.format(six.moves.builtins.__name__)
 
-    for rev, expected_value in RPI_REVISIONS.iteritems():
+    for rev, expected_value in six.iteritems(RPI_REVISIONS):
         with patch(
             builtin_open_name(),
             mock_open(REVISION_TEMPLATE % rev),
