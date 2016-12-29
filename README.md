@@ -1,4 +1,7 @@
 ## About 
+
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/83fed6fdb2804c3581d0101ee5a52561)](https://www.codacy.com/app/mikolajczyk-mateusz/dataplicity-agent?utm_source=github.com&utm_medium=referral&utm_content=wildfoundry/dataplicity-agent&utm_campaign=badger)
+
 Dataplicity agent is a Python based script which allows remote connection to your device via dataplicity.com. 
 
 It is packaged and delivered using a PEX file for convenience, but you can see the source code here. 
