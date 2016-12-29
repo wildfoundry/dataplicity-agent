@@ -14,7 +14,7 @@ REVISION_TEMPLATE = 'Revision: %s'
 """
 
 
-class FileContentIterator(object):
+class FileContentIterator:
     """ this is a replacement for mock_open which supports iterations.
     """
     def __init__(self, file_contents):
