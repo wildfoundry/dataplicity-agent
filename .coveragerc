@@ -1,0 +1,3 @@
+[run]
+omit = 
+    *dataplicity/constants.py
