@@ -26,5 +26,5 @@ def test_disk_usage(tmpdir):
     os.mkdir(path)
 
     _disk_usage = disk_usage(path)
-    assert type(_disk_usage) is sdiskusage
+    assert isinstance(_disk_usage, sdiskusage)
     assert hasattr(_disk_usage, 'total')
