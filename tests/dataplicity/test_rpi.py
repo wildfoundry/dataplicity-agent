@@ -3,7 +3,7 @@ from mock import patch
 import six
 
 
-REVISION_TEMPLATE = 'Revision: %s'
+REVISION_TEMPLATE = '\nRevision: %s'
 
 
 """ Unfortunetely, we can't use mock_open from mock library, because
