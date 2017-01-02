@@ -111,7 +111,7 @@ def _decode(read):
         number_bytes = b''
         while 1:
             c = read(1)
-            if not c.isdigit():
+            if not c.isdigit() and c != b'-':
                 if c != b'e':
                     raise DecodeError('illegal digit in size')
                 break
