@@ -250,7 +250,7 @@ class JSONRPC(object):
                                 error.get('message', self.unknown_error_msg))
 
 
-if __name__ == "__main__":  # pragma no cover
+if __name__ == "__main__":  # pragma: no cover
 
     client = JSONRPC("http://127.0.0.1:8000/dataplicityapi/jsonrpc/")
     print(client.call("system.get_motd"))
