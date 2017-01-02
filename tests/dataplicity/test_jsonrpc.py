@@ -2,7 +2,9 @@ from json import dumps
 
 import pytest
 from dataplicity.jsonrpc import (JSONRPC, ErrorCode, InvalidResponseError,
-                                 ProtocolError, RemoteError, RemoteMethodError)
+                                 ProtocolError, RemoteError, RemoteMethodError,
+                                 Batch)
+import six
 
 
 @pytest.fixture
@@ -100,3 +102,57 @@ def test_notify(httpserver, response):
 
     client.notify("foo")
     assert client.call_id == 1
+
+
+def test_batch_factory():
+    client = JSONRPC(None)
+    batch = client.batch()
+    assert isinstance(batch, Batch)
+
+    batch.call("foo")
+    batch.call("bar")
+
+    assert len(batch.calls) == 2
+
+
+def test_abandon_call():
+    client = JSONRPC(None)
+
+    with Batch(client) as b:
+        b.call("foo")
+        b.abandon()
+
+
+def test_send_batch_calls(httpserver, response):
+    httpserver.serve_content(dumps(response))
+    client = JSONRPC(httpserver.url)
+
+    with pytest.raises(ProtocolError) as exc:
+        with client.batch() as batch:
+            batch = Batch(client)
+            batch.call("foo")
+
+    assert str(exc.value) == 'Expected a list of response from the server'
+
+    response = [
+        response,
+        {'jsonrpc': '2.0', 'result': 'test-result', 'id': 3}
+    ]
+    httpserver.serve_content(dumps(response))
+    client.call_id = 1
+
+    with client.batch() as foo:
+        foo.call("Foo")
+        foo.call("FFF")
+
+    assert foo.get_result(2) is None
+    assert foo.get_result(3) == 'test-result'
+
+    with pytest.raises(KeyError) as exc:
+        foo.get_result(1111)
+
+    expected_message = 'No such call_id in response'
+    if six.PY2:
+        assert str(exc.value.message) == expected_message
+    elif six.PY3:
+        assert exc.value.args[0] == expected_message
