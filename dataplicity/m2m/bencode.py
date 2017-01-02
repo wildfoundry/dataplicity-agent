@@ -1,5 +1,6 @@
 from __future__ import print_function
 from __future__ import unicode_literals
+import six
 
 """
 Encode / Decode Bencode (http://en.wikipedia.org/wiki/Bencode)
@@ -60,12 +61,19 @@ def encode(obj):
 
     def add_encode(obj):
         if isinstance(obj, bytes):
-            append(b"{}:{}".format(len(obj), obj))
+            if PY2:
+                append(b"{}:{}".format(len(obj), obj))
+            elif PY3:
+                append(six.b("{}:".format(len(obj))))
+                append(obj)
         elif isinstance(obj, text_type):
             obj = obj.encode('utf-8')
-            append(b"{}:{}".format(len(obj), obj))
+            if PY2:
+                append(b"{}:{}".format(len(obj), obj))
+            elif PY3:
+                add_encode(obj)
         elif isinstance(obj, number_types):
-            append(b"i{}e".format(obj))
+            append(six.b("i{}e".format(obj)))
         elif isinstance(obj, (list, tuple)):
             append(b"l")
             for item in obj:

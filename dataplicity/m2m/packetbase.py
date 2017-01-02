@@ -6,7 +6,7 @@ Packet management
 
 """
 
-import bencode
+from . import bencode
 from ..compat import int_types, text_type, with_metaclass
 
 
