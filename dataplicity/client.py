@@ -7,7 +7,7 @@ from threading import Event, Lock
 import random
 import time
 
-from _version import __version__
+from ._version import __version__
 from . import constants
 from . import device_meta
 from . import jsonrpc

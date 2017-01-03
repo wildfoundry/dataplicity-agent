@@ -5,3 +5,4 @@ tox==2.5.0
 coverage==4.3.1
 pytest-cov==2.4.0
 pytest-localserver==0.3.6
+freezegun==0.3.8
