@@ -5,6 +5,8 @@ import six
 
 
 def test_bencode_encoder():
+    """ test bencoding capabilities
+    """
     assert encode({}) == six.b('de')  # empty dict
     assert encode({b'foo': 'bar'}) == six.b('d3:foo3:bare')
     assert encode({
@@ -30,6 +32,8 @@ def test_bencode_encoder():
 
 
 def test_bencode_decoder():
+    """ test decoding capabilities of bencode module
+    """
     # portable (python2+3) way of testing whether object is instance
     # of bytes ;)
     with pytest.raises(Exception) as exc:
