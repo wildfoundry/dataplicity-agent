@@ -1,5 +1,6 @@
 import pytest
 from dataplicity import client as mclient
+from dataplicity import device_meta
 from mock import patch
 from freezegun import freeze_time
 from datetime import datetime
@@ -86,3 +87,14 @@ def test_client_sync_id_generation(mocker):
     sync_id = mclient.Client.make_sync_id()
     assert len(sync_id) == 12
     assert random.choice.call_args('abcdefghijklmnopqrstuvwxyz')
+
+
+def test_client_sync_with_error(serial_file, auth_file, caplog, httpserver):
+    """
+    """
+    client = mclient.Client(rpc_url=httpserver.url)
+    client.sync()
+
+    # teardown for meta cache
+    device_meta._META_CACHE = None
+    assert 'sync failed' in caplog.text
