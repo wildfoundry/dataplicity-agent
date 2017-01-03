@@ -105,6 +105,8 @@ def test_notify(httpserver, response):
 
 
 def test_batch_factory():
+    """ testing Batch object creation
+    """
     client = JSONRPC(None)
     batch = client.batch()
     assert isinstance(batch, Batch)
@@ -116,14 +118,21 @@ def test_batch_factory():
 
 
 def test_abandon_call():
+    """ no httpserver here, therefore the method should raise an Exception,
+        if it weren't for the abandon() call.
+    """
     client = JSONRPC(None)
 
     with Batch(client) as b:
         b.call("foo")
         b.abandon()
 
+    assert b._abandoned is True
+
 
 def test_send_batch_calls(httpserver, response):
+    """ testing issuing calls via Batch interface
+    """
     httpserver.serve_content(dumps(response))
     client = JSONRPC(httpserver.url)
 
