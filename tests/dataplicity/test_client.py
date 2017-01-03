@@ -68,15 +68,15 @@ def test_system_exit_call(serial_file, auth_file, mocker):
         assert client.close.call_count == 2
 
 
-@freeze_time("2017-01-03 11:00:00")
+@freeze_time("2017-01-03 11:00:00", tz_offset=0)
 def test_disk_poll(serial_file, auth_file):
     """ test code for disk_poll
     """
     client = mclient.Client()
     client.disk_poll()
 
-    assert datetime.fromtimestamp(
-        client.next_disk_poll_time) == datetime(2017, 1, 3, 13, 00)
+    assert datetime.utcfromtimestamp(
+        client.next_disk_poll_time) == datetime(2017, 1, 3, 12, 00)
 
 
 def test_client_sync_id_generation(mocker):
