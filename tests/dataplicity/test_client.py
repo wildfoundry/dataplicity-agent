@@ -1,6 +1,9 @@
 import pytest
 from dataplicity import client as mclient
 from mock import patch
+from freezegun import freeze_time
+from datetime import datetime
+import random
 
 
 @pytest.fixture
@@ -63,3 +66,23 @@ def test_system_exit_call(serial_file, auth_file, mocker):
     ):
         client.run_forever()
         assert client.close.call_count == 2
+
+
+@freeze_time("2017-01-03 11:00:00")
+def test_disk_poll(serial_file, auth_file):
+    """ test code for disk_poll
+    """
+    client = mclient.Client()
+    client.disk_poll()
+
+    assert datetime.fromtimestamp(
+        client.next_disk_poll_time) == datetime(2017, 1, 3, 13, 00)
+
+
+def test_client_sync_id_generation(mocker):
+    """ check sync_id generation
+    """
+    mocker.spy(random, 'choice')
+    sync_id = mclient.Client.make_sync_id()
+    assert len(sync_id) == 12
+    assert random.choice.call_args('abcdefghijklmnopqrstuvwxyz')
