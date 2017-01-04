@@ -18,6 +18,9 @@ def test_bencode_encoder():
     assert encode([1, 2, 3]) == six.b('li1ei2ei3ee')
     assert encode([1, 'foo']) == six.b('li1e3:fooe')
     assert encode(1) == six.b('i1e')
+    # make sure that the numbers are encoded as bytes. This line would always
+    # return true in python2, but will have a meaning in python3
+    assert type(encode(1)) is bytes
     # utf-8 string
     assert encode(b'a\xc5\xbc') == six.b('3:a\xc5\xbc')
     assert encode("aż") == six.b("3:a\xc5\xbc")

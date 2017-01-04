@@ -76,7 +76,18 @@ def encode(obj):
                 # call above)
                 add_encode(obj)
         elif isinstance(obj, number_types):
-            append(six.b("i{}e".format(obj)))
+            # please note: because of unicode_literals being used, we can't use
+            # six.b, for the simple reason that the python2 implementation of
+            # b is as following:
+            # def b(v):
+            #     return v
+            # this, combined with the unicode literals means that a string
+            # (like "41" - after formatting a number) would actually turn into
+            # an unicode.. and thus, a number after encoding would turn into
+            # unicode object. This is not what we want. However, because these
+            # are only digits, they can be safely encoded with latin-1, which
+            # would produce bytes (in both python2 and 3)
+            append("i{}e".format(obj).encode("latin-1"))
         elif isinstance(obj, (list, tuple)):
             append(b"l")
             for item in obj:
