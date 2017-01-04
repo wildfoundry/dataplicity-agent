@@ -8,3 +8,4 @@ pytest-localserver==0.3.6
 freezegun==0.3.8
 pytest-mock==1.5.0
 pytest-catchlog==1.2.2
+ws4py==0.3.5

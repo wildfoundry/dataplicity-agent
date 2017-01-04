@@ -1,22 +1,30 @@
-import pytest
 import threading
-from SimpleWebsocketServer import SimpleWebSocketServer, WebSocket  # noqa
+
+import pytest
+from ws4py.server.wsgirefserver import WebSocketWSGIRequestHandler, WSGIServer
+from ws4py.server.wsgiutils import WebSocketWSGIApplication
+from wsgiref.simple_server import make_server
 
 
 class WebsocketServer(threading.Thread):
     def __init__(self, handler_class, host='127.0.0.1', port=0, **kwargs):
-        self._server = SimpleWebSocketServer(host, port, handler_class)
-        super(WebsocketServer, self).__init__()
+        self._server = make_server(
+            host, port, server_class=WSGIServer,
+            handler_class=WebSocketWSGIRequestHandler,
+            app=WebSocketWSGIApplication(handler_cls=handler_class)
+        )
+        self._server.initialize_websockets_manager()
+        super(WebsocketServer, self).__init__(
+            name=self.__class__,
+            target=self._server.serve_forever
+        )
 
     @property
     def uri(self):
-        return 'ws://{}'.format(self._server.serversocket.getsockname())
+        return 'ws://{}:{}'.format(*self._server.server_address)
 
     def stop(self):
-        self._server.finish = True
-
-    def run(self):
-        self._server.serveforever()
+        self._server.shutdown()
 
 
 def wsserver_factory(server_handler_class):
