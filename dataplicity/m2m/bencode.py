@@ -71,6 +71,9 @@ def encode(obj):
             if PY2:
                 append(b"{}:{}".format(len(obj), obj))
             elif PY3:
+                # it is safe to recurse here, because under PY3, the `obj`
+                # instance will be bytes, rather then str (note the encode()
+                # call above)
                 add_encode(obj)
         elif isinstance(obj, number_types):
             append(six.b("i{}e".format(obj)))
