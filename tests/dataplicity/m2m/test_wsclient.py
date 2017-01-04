@@ -20,7 +20,7 @@ class WSClientThread(threading.Thread):
     """
     def __init__(self, uri):
         self._server = WSClient(uri)
-        return super(WSClientThread, self).__init__(
+        super(WSClientThread, self).__init__(
             name=self.__class__,
             target=self._server.start
         )

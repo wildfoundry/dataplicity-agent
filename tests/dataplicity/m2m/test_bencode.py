@@ -20,7 +20,7 @@ def test_bencode_encoder():
     assert encode(1) == six.b('i1e')
     # make sure that the numbers are encoded as bytes. This line would always
     # return true in python2, but will have a meaning in python3
-    assert type(encode(1)) is bytes
+    assert isinstance(encode(1), bytes)
     # utf-8 string
     assert encode(b'a\xc5\xbc') == six.b('3:a\xc5\xbc')
     assert encode("aż") == six.b("3:a\xc5\xbc")
