@@ -3,6 +3,16 @@ from mock import Mock
 import logging
 
 
+class TestClient(object):
+    """ the actual channel talks to the client. However, since we're testing
+        just the channel functionality here, we want to make sure only that
+        certain functions get called. Therefore this fake Client class will
+        do
+    """
+    def close_channel(self, number):
+        pass
+
+
 def test_channel_repr():
     """ unit test for Channel class
     """
@@ -13,14 +23,6 @@ def test_channel_repr():
 def test_channel_close(caplog, mocker):
     """ unit tests for closing functionality
     """
-    class TestClient(object):
-        """ the actual channel talks to the client. However, since we're tsting
-            just the channel functionality here, we want to make sure only that
-            certain functions get called. Therefore this fake Client class will
-            do
-        """
-        def close_channel(self, number):
-            pass
 
     def close_callback_which_raises_error():
         raise ValueError('Intentional')
@@ -64,3 +66,34 @@ def test_channel_close(caplog, mocker):
     assert len(caplog.records) == num_log_entries + 1
     assert caplog.records[-1].msg == 'error in close callback'
     assert caplog.records[-1].levelno == logging.ERROR
+
+
+def test_channel_on_data(caplog):
+    """ unit test for Channel::on_data
+    """
+    client = TestClient()
+    chan = Channel(client, 123)
+    chan._closed = True
+    num_log_entries = len(caplog.records)
+    # the function should break early
+    data = b'\x01\x02\x03'
+    chan.on_data(data)
+    assert len(caplog.records) == num_log_entries + 1
+    chan._closed = False
+
+    data = b'\x01\x02\x03'
+    mock_data_callback = Mock()
+    chan.set_callbacks(on_data=mock_data_callback)
+    chan.on_data(data)
+    assert mock_data_callback.called
+
+    chan.set_callbacks(on_data=None)
+    # this returns true only when data_event is set.
+    assert bool(chan) is False
+    assert chan.deque.count(data) == 0
+    chan.on_data(data)
+    # data_even should be set, because there was no callback registered to
+    # handle on_data event
+    assert bool(chan) is True
+    assert chan.deque.count(data) == 1
+    assert chan.size == 3
