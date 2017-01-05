@@ -112,6 +112,9 @@ class Channel(object):
     def __nonzero__(self):
         return self._data_event.is_set()
 
+    def __bool__(self):
+        return self.__nonzero__()
+
     def read(self, count, timeout=None, block=False):
         """Read up to `count` bytes."""
         incoming_bytes = []
