@@ -22,9 +22,8 @@ def test_channel_close(caplog, mocker):
         def close_channel(self, number):
             pass
 
-        @classmethod
-        def close_callback_which_raises_error(self):
-            raise ValueError('Intentional')
+    def close_callback_which_raises_error():
+        raise ValueError('Intentional')
 
     mock_close_callback = Mock()
     client = TestClient()
@@ -57,7 +56,7 @@ def test_channel_close(caplog, mocker):
     assert mock_close_callback.call_count == 1
 
     # ok, now for something completely different.
-    chan.set_callbacks(on_close=client.close_callback_which_raises_error)
+    chan.set_callbacks(on_close=close_callback_which_raises_error)
     chan._closed = False
     num_log_entries = len(caplog.records)
     chan.on_close()

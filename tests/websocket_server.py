@@ -7,6 +7,11 @@ from wsgiref.simple_server import make_server
 
 
 class WebsocketServer(threading.Thread):
+    """ Local websocket thread.
+        This class will allow us to test websocket requests locally, without
+        the need to mock any socket operations. It is a threading class, so
+        that we would be able to start and stop the server.
+    """
     def __init__(self, handler_class, host='127.0.0.1', port=0, **kwargs):
         self._server = make_server(
             host, port, server_class=WSGIServer,
