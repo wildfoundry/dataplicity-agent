@@ -22,6 +22,7 @@ def test_channel_close(caplog, mocker):
         def close_channel(self, number):
             pass
 
+        @classmethod
         def close_callback_which_raises_error(self):
             raise ValueError('Intentional')
 
