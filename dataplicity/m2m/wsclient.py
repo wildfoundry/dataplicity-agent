@@ -460,7 +460,7 @@ class WSClient(ThreadedDispatcher):
             log.exception('error handling instruction')
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
 
     import logging
     logging.basicConfig(level=logging.DEBUG)
