@@ -7,22 +7,6 @@ from datetime import datetime
 import random
 
 
-@pytest.fixture
-def serial_file(tmpdir):
-    serial_file = tmpdir.join("serial")
-    serial_file.write("test-serial")
-    with patch('dataplicity.constants.SERIAL_LOCATION', str(serial_file)):
-        yield str(serial_file)
-
-
-@pytest.fixture
-def auth_file(tmpdir):
-    auth_file = tmpdir.join("auth")
-    auth_file.write("test-auth")
-    with patch('dataplicity.constants.AUTH_LOCATION', str(auth_file)):
-        yield str(auth_file)
-
-
 def test_client_initialization(auth_file, serial_file):
     """ this function tests 'succesful' initialization of the client
     """
