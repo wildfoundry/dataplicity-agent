@@ -1,7 +1,7 @@
 import pytest
 from dataplicity import client as mclient
 from dataplicity import device_meta
-from mock import patch
+from mock import patch, call
 from freezegun import freeze_time
 from datetime import datetime
 import random
@@ -86,7 +86,7 @@ def test_client_sync_id_generation(mocker):
     mocker.spy(random, 'choice')
     sync_id = mclient.Client.make_sync_id()
     assert len(sync_id) == 12
-    assert random.choice.call_args('abcdefghijklmnopqrstuvwxyz')
+    assert random.choice.call_args == call('abcdefghijklmnopqrstuvwxyz')
 
 
 def test_client_sync_with_error(serial_file, auth_file, caplog, httpserver):
