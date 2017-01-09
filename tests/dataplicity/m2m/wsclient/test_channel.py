@@ -1,7 +1,8 @@
-from dataplicity.m2m.wsclient import Channel
-from mock import Mock, call
 import logging
+
 import pytest
+from dataplicity.m2m.wsclient import Channel, ChannelFile
+from mock import Mock, call
 
 
 class TestClient(object):
@@ -106,6 +107,9 @@ def test_channel_on_data(caplog, channel):
 
 
 def test_channel_on_control_with_closed_channel(caplog, channel):
+    """ this unit test covers the code which is launched when there is an
+        attempt to use the on_control function, but the channel has been closed
+    """
     chan = channel
     chan.on_close()
     num_log_entries = len(caplog.records)
@@ -116,7 +120,11 @@ def test_channel_on_control_with_closed_channel(caplog, channel):
 
 
 def test_channel_on_control_with_callback(channel, mocker):
+    """ unit test for 'on_control'
+    """
     def control_callback(data):
+        """ method which imitates a control callback
+        """
         pass
 
     channel.set_callbacks(on_control=control_callback)
@@ -126,5 +134,10 @@ def test_channel_on_control_with_callback(channel, mocker):
     channel.on_control(data)
 
     assert channel._control_callback.call_count == 1
-    print(type(channel._control_callback.call_args))
     assert channel._control_callback.call_args == call(data)
+
+
+def test_channel_get_file(channel):
+    """ unit test for channel::get_file
+    """
+    assert isinstance(channel.get_file(), ChannelFile)
