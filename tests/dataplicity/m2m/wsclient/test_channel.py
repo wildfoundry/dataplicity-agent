@@ -1,6 +1,7 @@
 from dataplicity.m2m.wsclient import Channel
-from mock import Mock
+from mock import Mock, call
 import logging
+import pytest
 
 
 class TestClient(object):
@@ -13,6 +14,12 @@ class TestClient(object):
         pass
 
 
+@pytest.fixture
+def channel():
+    client = TestClient()
+    return Channel(client, 123)
+
+
 def test_channel_repr():
     """ unit test for Channel class
     """
@@ -20,7 +27,7 @@ def test_channel_repr():
     assert repr(c) == '<channel 123>'
 
 
-def test_channel_close(caplog, mocker):
+def test_channel_close(caplog, mocker, channel):
     """ unit tests for closing functionality
     """
 
@@ -28,8 +35,8 @@ def test_channel_close(caplog, mocker):
         raise ValueError('Intentional')
 
     mock_close_callback = Mock()
-    client = TestClient()
-    chan = Channel(client, 123)
+    chan = channel
+    client = chan.client
 
     assert chan.is_closed is False
     mocker.spy(client, 'close_channel')
@@ -68,11 +75,10 @@ def test_channel_close(caplog, mocker):
     assert caplog.records[-1].levelno == logging.ERROR
 
 
-def test_channel_on_data(caplog):
+def test_channel_on_data(caplog, channel):
     """ unit test for Channel::on_data
     """
-    client = TestClient()
-    chan = Channel(client, 123)
+    chan = channel
     chan._closed = True
     num_log_entries = len(caplog.records)
     # the function should break early
@@ -97,3 +103,28 @@ def test_channel_on_data(caplog):
     assert bool(chan) is True
     assert chan.deque.count(data) == 1
     assert chan.size == 3
+
+
+def test_channel_on_control_with_closed_channel(caplog, channel):
+    chan = channel
+    chan.on_close()
+    num_log_entries = len(caplog.records)
+    chan.on_control(b'\x01\x02\x03')
+    assert len(caplog.records) == num_log_entries + 1
+    assert caplog.records[-1].message == '3 bytes from closed <channel 123> ignored'  # noqa
+    assert caplog.records[-1].levelno == logging.DEBUG
+
+
+def test_channel_on_control_with_callback(channel, mocker):
+    def control_callback(data):
+        pass
+
+    channel.set_callbacks(on_control=control_callback)
+    mocker.spy(channel, '_control_callback')
+
+    data = b'\x01\x02\x03'
+    channel.on_control(data)
+
+    assert channel._control_callback.call_count == 1
+    print(type(channel._control_callback.call_args))
+    assert channel._control_callback.call_args == call(data)
