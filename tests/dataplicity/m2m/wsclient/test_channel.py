@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+import six
 from dataplicity.m2m.wsclient import Channel, ChannelFile
 from mock import Mock, call
 
@@ -12,6 +13,15 @@ class TestClient(object):
         do
     """
     def close_channel(self, number):
+        """ empty implementation of close_channel function. We only care about
+            call args, but the function has to exist, in order for us to
+            get this property
+        """
+        pass
+
+    def channel_write(self, number, data):
+        """ please refer to docstring of close_channel
+        """
         pass
 
 
@@ -141,3 +151,47 @@ def test_channel_get_file(channel):
     """ unit test for channel::get_file
     """
     assert isinstance(channel.get_file(), ChannelFile)
+
+
+def test_channel_read_returns_empty_data_if_block_timeouts(channel):
+    """ let's try to test if we tell to read 2 bytes, but don't actually send
+        anything, the function returns empty data.
+    """
+    assert channel.read(count=1, timeout=1, block=True) == six.b('')
+
+
+def test_channel_read(channel):
+    """ unit test for reading from channel
+    """
+
+    # data to be sent to channel.
+    data = b'\x01\x02\x03\x04\x05\x06\x07'
+    # write the data
+    channel.on_data(data)
+
+    # let's read only 6 bytes from the channel.
+    assert channel.read(count=6) == data[:-1]
+    # now we should be able to read 1 remaining byte
+    # note: -1: is by all means not accidental. It is true, that there will be
+    # no other byte available apart from the last one (-1), however we want to
+    # interpret the output as a binary string, and omitting the colon (and thus
+    # leaving just data[-1]) would yield 7 (as a number, not binary string)
+    assert channel.read(count=1) == data[-1:]
+    # the subsequential reads should yield empty data:
+    assert channel.read(1) == six.b('')
+
+
+def test_channel_write(channel, mocker):
+    """ test code for channel::write
+    """
+    with pytest.raises(Exception) as e:
+        channel.write(six.u("abcde"))
+
+    assert str(e.value) == "data must be bytes"
+
+    # check that client was called in order to write the data.
+    mocker.spy(channel.client, 'channel_write')
+    data = b'\x01\x02'
+    channel.write(data)
+    assert channel.client.channel_write.call_args == call(
+        channel.number, data)
