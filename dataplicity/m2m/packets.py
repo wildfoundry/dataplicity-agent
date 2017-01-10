@@ -443,7 +443,7 @@ class PeerClosePort(M2MPacket):
                   ('port', int)]
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     ping_packet = PingPacket(data=b'test')
     print(ping_packet)
     print(ping_packet.as_bytes)
