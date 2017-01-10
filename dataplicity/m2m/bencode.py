@@ -119,6 +119,8 @@ def _decode(read):
     """Decode bebcode, `read` should be a callable that returns number of bytes."""
     # TODO: Some input validation
     obj_type = read(1)
+    if obj_type == b'':
+        raise DecodeError('invalid input')
     if obj_type == b'e':
         return None
     if obj_type == b'i':
