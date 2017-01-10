@@ -19,6 +19,8 @@ def test_run_command(run_forever, serial_file, auth_file):
            which are irrelevant to our test anyway.
     """
     class FakeArgs(object):
+        """ fake stdargs object
+        """
         server_url = 'http://example.com'
         m2m_url = 'ws://example.com'
 
