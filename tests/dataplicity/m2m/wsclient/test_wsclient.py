@@ -18,8 +18,8 @@ class WSClientThread(threading.Thread):
        need the client (i.e. at the end of the test method) we can do
        client.close()
     """
-    def __init__(self, uri):
-        self._server = WSClient(uri)
+    def __init__(self, uri, *args, **kwargs):
+        self._server = WSClient(uri, *args, **kwargs)
         super(WSClientThread, self).__init__(
             name=self.__class__,
             target=self._server.start
@@ -33,6 +33,7 @@ def test_wsclient(wsserver):
     """ this is a very basic proof that we can start and stop the builtin
         WSClient *and* wsserver
     """
-    client = WSClientThread(wsserver.uri)
-    time.sleep(2)
-    client.close()
+    with WSClient(wsserver.uri, uuid='ident') as client:
+        assert client.identity == 'ident'
+
+    assert client.identity is None
