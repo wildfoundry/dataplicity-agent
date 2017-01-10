@@ -31,6 +31,9 @@ class PacketMeta(type):
             if packet_cls.type >= 0:
                 assert packet_cls.type not in packet_cls.registry, "packet type {!r} has already been registered".format(packet_cls, type)
                 packet_cls.registry[packet_cls.type] = packet_cls
+                # register the packet type in base class so we can have a
+                # generic interface of accessing it.
+                bases[0].registry[packet_cls.type] = packet_cls
         return packet_cls
 
 
