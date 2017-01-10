@@ -61,20 +61,10 @@ def encode(obj):
 
     def add_encode(obj):
         if isinstance(obj, bytes):
-            if PY2:
-                append(b"{}:{}".format(len(obj), obj))
-            elif PY3:
-                append(six.b("{}:".format(len(obj))))
-                append(obj)
+            append(u"{}:".format(len(obj)).encode())
+            append(obj)
         elif isinstance(obj, text_type):
-            obj = obj.encode('utf-8')
-            if PY2:
-                append(b"{}:{}".format(len(obj), obj))
-            elif PY3:
-                # it is safe to recurse here, because under PY3, the `obj`
-                # instance will be bytes, rather then str (note the encode()
-                # call above)
-                add_encode(obj)
+            add_encode(obj.encode('utf-8'))
         elif isinstance(obj, number_types):
             # please note: because of unicode_literals being used, we can't use
             # six.b, for the simple reason that the python2 implementation of
@@ -85,9 +75,9 @@ def encode(obj):
             # (like "41" - after formatting a number) would actually turn into
             # an unicode.. and thus, a number after encoding would turn into
             # unicode object. This is not what we want. However, because these
-            # are only digits, they can be safely encoded with latin-1, which
-            # would produce bytes (in both python2 and 3)
-            append("i{}e".format(obj).encode("latin-1"))
+            # are only digits, they can be safely encoded which would produce
+            # bytes (in both python2 and 3)
+            append(u"i{}e".format(obj).encode())
         elif isinstance(obj, (list, tuple)):
             append(b"l")
             for item in obj:
