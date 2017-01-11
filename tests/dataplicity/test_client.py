@@ -60,8 +60,8 @@ def test_disk_poll(serial_file, auth_file):
     client = mclient.Client()
     client.disk_poll()
 
-    assert datetime.utcfromtimestamp(
-        client.next_disk_poll_time) == datetime(2017, 1, 3, 12, 00)
+    assert datetime.utcfromtimestamp(client.next_disk_poll_time) == \
+        datetime(2017, 1, 3, 12, 00)
 
 
 def test_client_sync_id_generation(mocker):
