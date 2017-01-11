@@ -1,14 +1,14 @@
-from __future__ import print_function
-from __future__ import unicode_literals
-import six
+from __future__ import print_function, unicode_literals
+
+import sys
+
+import io
 
 """
 Encode / Decode Bencode (http://en.wikipedia.org/wiki/Bencode)
 
 """
 
-import io
-import sys
 
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3

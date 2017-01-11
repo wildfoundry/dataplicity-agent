@@ -1,5 +1,3 @@
-import os
-
 import six
 from dataplicity.disk_tools import disk_usage, sdiskusage, usage_percent
 
