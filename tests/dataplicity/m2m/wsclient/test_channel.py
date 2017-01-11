@@ -38,52 +38,54 @@ def test_channel_repr():
     assert repr(c) == '<channel 123>'
 
 
-def test_channel_close(caplog, mocker, channel):
+def test_channel_close(channel, mocker):
     """ unit tests for closing functionality
     """
-
-    def close_callback_which_raises_error():
-        raise ValueError('Intentional')
-
-    mock_close_callback = Mock()
-    chan = channel
-    client = chan.client
-
-    assert chan.is_closed is False
-    mocker.spy(client, 'close_channel')
-    chan.close()
+    assert channel.is_closed is False
+    mocker.spy(channel.client, 'close_channel')
+    channel.close()
     # make sure that the client function was called
-    assert client.close_channel.call_count == 1
+    assert channel.client.close_channel.call_count == 1
 
-    # we set the _closed attribute to True, and now the function shouldn't be
-    # called...
-    chan._closed = True
-    chan.close()
-    # ... leaving the call_count at 1
-    assert client.close_channel.call_count == 1
-    chan._closed = False
 
-    chan.set_callbacks(on_close=mock_close_callback)
-    chan.on_close()
+def test_client_close_isnt_called_when_channel_is_closed(mocker, channel):
+    assert channel.is_closed is False
+    channel.on_close()
+    assert channel.is_closed is True
+    mocker.spy(channel.client, 'close_channel')
+    channel.close()
+    # make sure that the client function was not called
+    assert channel.client.close_channel.call_count == 0
+
+
+def test_channel_calls_callback_on_close(mocker, channel):
+    mock_close_callback = Mock()
+    channel.set_callbacks(on_close=mock_close_callback)
+    channel.on_close()
     # ok, here's what should have happened.
     # 1. chan._closed should be set to True
-    assert chan._closed is True
+    assert channel.is_closed is True
     # 2. close callback should have ben called
     assert mock_close_callback.call_count == 1
     # now, when we try to call close() for the second time, it should quickly
     # return, without hitting the callback
-    chan.on_close()
+    channel.on_close()
     assert mock_close_callback.call_count == 1
 
-    # ok, now for something completely different.
-    chan.set_callbacks(on_close=close_callback_which_raises_error)
-    chan._closed = False
-    num_log_entries = len(caplog.records)
-    chan.on_close()
+def test_channel_logs_exception_on_close(caplog, mocker, channel):
+    capture_log = caplog
+
+    def close_callback_which_raises_error():
+        raise ValueError('Intentional')
+
+    channel.set_callbacks(on_close=close_callback_which_raises_error)
+
+    num_log_entries = len(capture_log.records)
+    channel.on_close()
     # make sure that log.exception was called
-    assert len(caplog.records) == num_log_entries + 1
-    assert caplog.records[-1].msg == 'error in close callback'
-    assert caplog.records[-1].levelno == logging.ERROR
+    assert len(capture_log.records) == num_log_entries + 1
+    assert capture_log.records[-1].msg == 'error in close callback'
+    assert capture_log.records[-1].levelno == logging.ERROR
 
 
 def test_channel_on_data(caplog, channel):
