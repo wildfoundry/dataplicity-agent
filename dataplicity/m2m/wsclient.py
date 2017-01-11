@@ -461,20 +461,3 @@ class WSClient(ThreadedDispatcher):
             self.on_instruction(sender, data)
         except:
             log.exception('error handling instruction')
-
-
-if __name__ == "__main__":  # pragma: no cover
-
-    import logging
-    logging.basicConfig(level=logging.DEBUG)
-
-    client = WSClient('wss://127.0.0.1:8888/m2m/')
-
-    client.start()
-
-    import time
-    try:
-        while 1:
-            time.sleep(0.1)
-    finally:
-        client.close()
