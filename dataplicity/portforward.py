@@ -285,7 +285,7 @@ class PortForwardManager(object):
 
     def get_service_on_port(self, port):
         """Get the service on a numbered port."""
-        service_name = self._ports.get('port')
+        service_name = self._ports.get(port)
         if service_name is None:
             return None
         return self._services[service_name]
