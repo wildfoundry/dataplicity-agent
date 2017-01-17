@@ -33,7 +33,10 @@ class ChannelFile(object):
         self.channel_no = channel_no
 
     def write(self, data):
-        sys.stdout.write(data)
+        # http://stackoverflow.com/questions/23932332/writing-bytes-to-standard-output-in-a-way-compatible-with-both-python2-and-pyth
+        # retrieve stdout as a binary file object
+        output = getattr(sys.stdout, 'buffer', sys.stdout)
+        output.write(data)
         self.client.channel_write(self.channel_no, data)
 
     def fileno(self):
