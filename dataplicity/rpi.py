@@ -28,7 +28,7 @@ RPI_REVISIONS = {
     '900092': 'rpi_0',
     'a02082': 'rpi_3b',
     'a22082': 'rpi_3b',
-
+    'a220a0': 'rpi_3_cm',
 }
 
 
