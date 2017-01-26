@@ -7,13 +7,14 @@ from threading import Event, Lock
 import random
 import time
 
-from _version import __version__
+from ._version import __version__
 from . import constants
 from . import device_meta
 from . import jsonrpc
 from .disk_tools import disk_usage
 from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
+import six
 
 log = logging.getLogger('agent')
 
@@ -117,7 +118,8 @@ class Client(object):
     def make_sync_id(cls):
         """Make a random sync ID."""
         sync_id = ''.join(
-            random.choice('abcdefghijklmnopqrstuvwxyz') for _ in xrange(12)
+            random.choice('abcdefghijklmnopqrstuvwxyz')
+            for _ in six.moves.xrange(12)
         )
         return sync_id
 

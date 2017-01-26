@@ -441,11 +441,3 @@ class PeerClosePort(M2MPacket):
     type = PacketType.peer_close_port
     attributes = [('node', bytes),
                   ('port', int)]
-
-
-if __name__ == "__main__":
-    ping_packet = PingPacket(data=b'test')
-    print(ping_packet)
-    print(ping_packet.as_bytes)
-    print(PingPacket.from_bytes(ping_packet.as_bytes))
-    print(M2MPacket.create('ping', data=b"test2"))
