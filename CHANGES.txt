@@ -1,7 +1,8 @@
-1.0.0
+0.4.1
 -----
 
-Added Raspberry pi 3 compute module to device detection
+Added Raspberry pi 3 compute module to device detectio
+Fix for delayed packet issue
 
 0.4.0
 -----
