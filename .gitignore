@@ -12,3 +12,7 @@ dist/
 .DS_Store
 bin/
 ~*
+.coverage
+.cache
+reports
+*.sublime*

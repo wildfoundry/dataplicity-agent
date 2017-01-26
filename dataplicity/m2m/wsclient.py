@@ -33,7 +33,10 @@ class ChannelFile(object):
         self.channel_no = channel_no
 
     def write(self, data):
-        sys.stdout.write(data)
+        # http://stackoverflow.com/questions/23932332/writing-bytes-to-standard-output-in-a-way-compatible-with-both-python2-and-pyth
+        # retrieve stdout as a binary file object
+        output = getattr(sys.stdout, 'buffer', sys.stdout)
+        output.write(data)
         self.client.channel_write(self.channel_no, data)
 
     def fileno(self):
@@ -111,6 +114,9 @@ class Channel(object):
 
     def __nonzero__(self):
         return self._data_event.is_set()
+
+    def __bool__(self):
+        return self.__nonzero__()
 
     def read(self, count, timeout=None, block=False):
         """Read up to `count` bytes."""
@@ -458,20 +464,3 @@ class WSClient(ThreadedDispatcher):
             self.on_instruction(sender, data)
         except:
             log.exception('error handling instruction')
-
-
-if __name__ == "__main__":
-
-    import logging
-    logging.basicConfig(level=logging.DEBUG)
-
-    client = WSClient('wss://127.0.0.1:8888/m2m/')
-
-    client.start()
-
-    import time
-    try:
-        while 1:
-            time.sleep(0.1)
-    finally:
-        client.close()

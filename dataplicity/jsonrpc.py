@@ -248,29 +248,3 @@ class JSONRPC(object):
                                 code,
                                 error.get('data', None),
                                 error.get('message', self.unknown_error_msg))
-
-
-if __name__ == "__main__":
-
-    client = JSONRPC("http://127.0.0.1:8000/dataplicityapi/jsonrpc/")
-    print(client.call("system.get_motd"))
-    print(client.call("hello", who="Will"))
-    print(client.call("system.get_time"))
-
-    with client.batch() as batch:
-        batch.call("system.get_time")
-        batch.call_with_id("greet Sam", "greet", who="Sam")
-        batch.call_with_id("greet Frodo", "greet", who="Frodo")
-        batch.call_with_id("greet Bilbo", "greet", whso="Bilbo")
-    print(batch.results)
-    print(batch.errors)
-    try:
-        print(client.call("test_exception"))
-    except Exception as e:
-        print(e)
-
-    try:
-        print(client.call("test_error"))
-    except Exception as e:
-        print(e)
-
