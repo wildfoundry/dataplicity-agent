@@ -1,7 +1,9 @@
-1.0.0
+0.4.1
 -----
 
 Added Raspberry pi 3 compute module to device detection
+Fix for delayed packet issue
+Preliminary support for Python3
 
 0.4.0
 -----
