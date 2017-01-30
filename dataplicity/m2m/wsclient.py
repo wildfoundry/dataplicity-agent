@@ -155,16 +155,6 @@ class Channel(object):
         return ChannelFile(self.client, self.number)
 
 
-class ThreadedDispatcher(threading.Thread, Dispatcher):
-    """Dispatches packets from a thread."""
-
-    def __init__(self, **kwargs):
-        # Why didn't super work here?
-        # Because threading.Thread doesn't call super
-        threading.Thread.__init__(self)
-        Dispatcher.__init__(self, Packet, log=kwargs.get('log'))
-
-
 class WSApp(WebSocketClient):
     """Wrapper around ws4py interface for WSClient."""
 
@@ -180,14 +170,21 @@ class WSApp(WebSocketClient):
         try:
             self.on_open(self)
         except Exception as error:
-            self.log.error('error in on_open: %s', error)
+            self.log.error('error in WSApp.on_open: %s', error)
 
     def received_message(self, message):
-        if message.is_binary:
-            self.on_message(self, message.data)
+        try:
+            if message.is_binary:
+                self.on_message(self, message.data)
+        except Exception as error:
+            self.log.error('error in WSApp.received_message: %s', error)
+
 
     def closed(self, code, reason=None):
-         self.on_close(self)
+        try:
+            self.on_close(self)
+        except Exception as e:
+            self.log.error('error on WSApp.closed')
 
 
 class WSClient(Dispatcher):
