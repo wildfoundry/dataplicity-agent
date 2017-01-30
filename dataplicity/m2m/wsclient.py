@@ -8,7 +8,8 @@ import sys
 import threading
 from collections import defaultdict, deque
 
-import websocket
+#import websocket
+from ws4py.client.threadedclient import WebSocketClient
 
 from . import bencode
 from . import packets
@@ -164,7 +165,31 @@ class ThreadedDispatcher(threading.Thread, Dispatcher):
         Dispatcher.__init__(self, Packet, log=kwargs.get('log'))
 
 
-class WSClient(ThreadedDispatcher):
+class WSApp(WebSocketClient):
+
+    def __init__(self, url, log, on_open, on_message, on_error, on_close):
+        self.on_open = on_open
+        self.on_message = on_message
+        self.on_error = on_error
+        self.on_close = on_close
+        self.log = log
+        super(WSApp, self).__init__(url)
+
+    def opened(self):
+        try:
+            self.on_open(self)
+        except Exception as error:
+            self.log.error('error in on_open: %s', error)
+
+    def received_message(self, message):
+        if message.is_binary:
+            self.on_message(self, message.data)
+
+    def closed(self, code, reason=None):
+         self.on_close(self)
+
+
+class WSClient(Dispatcher):
     """Interface to the M2M server."""
 
     def __init__(self, url, uuid=None, log=None,
@@ -172,11 +197,14 @@ class WSClient(ThreadedDispatcher):
         self.url = url
         self.channel_callback = channel_callback
         self.control_callback = control_callback
-        kwargs['on_open'] = self.on_open
-        kwargs['on_message'] = self.on_message
-        kwargs['on_error'] = self.on_error
-        kwargs['on_close'] = self.on_close
-        self.kwargs = kwargs
+        self.app = WSApp(
+            url,
+            on_open=self.on_open,
+            on_message=self.on_message,
+            on_error=self.on_error,
+            on_close=self.on_close,
+            log=log
+        )
 
         self._closed = False
         self.identity = uuid
@@ -189,12 +217,11 @@ class WSClient(ThreadedDispatcher):
         self.callbacks = defaultdict(list)
         self.hooks = defaultdict(list)
 
-        super(WSClient, self).__init__(log=log)
         self.name = "m2m"  # Thread name
         self.daemon = True
 
-        self.app = websocket.WebSocketApp(self.url,
-                                          **self.kwargs)
+        super(WSClient, self).__init__(Packet, log=log)
+
 
     def __repr__(self):
         """Return the URL."""
@@ -225,7 +252,7 @@ class WSClient(ThreadedDispatcher):
 
     def connect(self, wait=True, timeout=None):
         """Connect and optionally wait until we are ready to communicate with the server."""
-        self.start()
+        self.app.connect()
         if wait:
             return self.wait_ready(timeout=timeout)
         return None
@@ -240,7 +267,7 @@ class WSClient(ThreadedDispatcher):
                     try:
                         callback(result)
                     except:
-                        self.exception('error in command callback')
+                        self.log.exception('error in command callback')
                 del self.callbacks[command_id]
 
     def clear_callbacks(self):
@@ -251,7 +278,7 @@ class WSClient(ThreadedDispatcher):
                     try:
                         callback(None)
                     except:
-                        self.exception('error clearing callback')
+                        self.log.exception('error clearing callback')
 
     def get_channel(self, channel_no):
         # TODO: Create channels in response to packets
@@ -274,10 +301,14 @@ class WSClient(ThreadedDispatcher):
     def run(self):
         sockopt = [(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)]
         try:
-            self.app.run_forever(sockopt=sockopt,
-                                 ping_interval=30,
-                                 ping_timeout=10,
-                                 sslopt={"cert_reqs": ssl.CERT_NONE})
+            # self.app.run_forever(sockopt=sockopt,
+            #                      ping_interval=30,
+            #                      ping_timeout=10,
+            #                      sslopt={"cert_reqs": ssl.CERT_NONE})
+            self.app.run_forever(
+                heartbeat_freq=30,
+                ssl_options={"cert_reqs": ssl.CERT_NONE}
+            )
         except (SystemExit, KeyboardInterrupt):
             log.info('wsclient exit requested')
         except:
@@ -320,10 +351,11 @@ class WSClient(ThreadedDispatcher):
         packet_bytes = packet.encode_binary()
         self.send_bytes(packet_bytes)
 
+
     def send_bytes(self, packet_bytes):
         """Send bytes over the websocket."""
         with self.write_lock:
-            self.app.sock.send_binary(packet_bytes)
+            self.app.send(packet_bytes, binary=True)
 
     def on_open(self, app):
         """Called when WS is opened."""
@@ -338,6 +370,7 @@ class WSClient(ThreadedDispatcher):
         """On a WS message."""
         try:
             packet = bencode.decode(data)
+            print(packet)
         except:
             log.exception('packet could not be decoded')
         else:
