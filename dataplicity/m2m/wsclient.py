@@ -166,6 +166,7 @@ class ThreadedDispatcher(threading.Thread, Dispatcher):
 
 
 class WSApp(WebSocketClient):
+    """Wrapper around ws4py interface for WSClient."""
 
     def __init__(self, url, log, on_open, on_message, on_error, on_close):
         self.on_open = on_open
