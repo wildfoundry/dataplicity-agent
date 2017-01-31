@@ -238,8 +238,8 @@ class Client(object):
             return None
         except jsonrpc.ServerUnreachableError as e:
             log.debug('set m2m identity failed, %s', e)
-        except:
-            log.error('unable to set m2m identity')
+        except Exception as error:
+            log.error('unable to set m2m identity: %s', error)
             return None
         else:
             # If we made it here the server has acknowledged it received the identity
