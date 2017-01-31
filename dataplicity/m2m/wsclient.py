@@ -166,21 +166,38 @@ class WSApp(WebSocketClient):
         self.log = log
         super(WSApp, self).__init__(url)
 
+    def connect(self):
+        """Connect the WS, call on_error callback."""
+        try:
+            super(WSApp, self).connect()
+        except Exception as error:
+            self.on_error(self, error)
+
+    def close(self, *args, **kwargs):
+        """Close the WS, log errors."""
+        try:
+            super(WSApp, self).close(*args, **kwargs)
+        except Exception as error:
+            self.log.debug('WSApp.close %s', error)
+
     def opened(self):
+        """Call on_open callback, log errors."""
         try:
             self.on_open(self)
         except Exception as error:
-            self.log.error('error in WSApp.on_open: %s', error)
+            self.log.error('WSApp.on_open: %s', error)
 
     def received_message(self, message):
+        """Call on_message with binary packets."""
         try:
             if message.is_binary:
                 self.on_message(self, message.data)
         except Exception as error:
-            self.log.error('error in WSApp.received_message: %s', error)
+            self.log.error('WSApp.received_message: %s', error)
 
 
     def closed(self, code, reason=None):
+        """Call on_close method, log errors."""
         try:
             self.on_close(self)
         except Exception as e:
@@ -368,7 +385,6 @@ class WSClient(Dispatcher):
         """On a WS message."""
         try:
             packet = bencode.decode(data)
-            print(packet)
         except:
             log.exception('packet could not be decoded')
         else:
@@ -385,7 +401,7 @@ class WSClient(Dispatcher):
         self.hard_close_channels()
         self.clear_callbacks()
         try:
-            # Not entirely sure if this is neccesary
+            # Not entirely sure if this is necessary
             self.app.close()
         except:
             log.exception('error closing ws app in on_error')

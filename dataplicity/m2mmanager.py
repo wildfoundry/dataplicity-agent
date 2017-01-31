@@ -101,6 +101,13 @@ class AutoConnectThread(threading.Thread):
     def start_connect(self):
         with self.lock:
             log.debug('connecting to %s', self.url)
+            if self._m2m_client is not None:
+                m2m_client = self._m2m_client
+                self._m2m_client = None
+                try:
+                    m2m_client.terminate()
+                except Exception as error:
+                    log.debug("_m2m_client.terminate: %s", error)
             self._m2m_client = M2MClient(self.url, log=log, uuid=self._identity)
             self._m2m_client.set_manager(self.manager)
             self._m2m_client.connect(wait=False)
@@ -111,7 +118,8 @@ class AutoConnectThread(threading.Thread):
 
         while 1:
             # Get the identity, and tell the server about it
-            identity = self._identity = self.m2m_client.wait_ready(10)
+            identity = self._identity = self.m2m_client.wait_ready(20)
+            log.info('m2m identity is %r', identity)
             self.manager.set_identity(identity)
 
             with self.lock:
@@ -121,7 +129,7 @@ class AutoConnectThread(threading.Thread):
 
             # We are connected, so wait on the exit event
             # The timeout prevents hammering of the server
-            if self.exit_event.wait(5.0):
+            if self.exit_event.wait(10.0):
                 break
 
         # Tell the server we are no longer connected to m2m
