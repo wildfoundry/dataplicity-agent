@@ -8,7 +8,6 @@ import sys
 import threading
 from collections import defaultdict, deque
 
-#import websocket
 from ws4py.client.threadedclient import WebSocketClient
 
 from . import bencode
@@ -316,10 +315,6 @@ class WSClient(Dispatcher):
     def run(self):
         sockopt = [(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)]
         try:
-            # self.app.run_forever(sockopt=sockopt,
-            #                      ping_interval=30,
-            #                      ping_timeout=10,
-            #                      sslopt={"cert_reqs": ssl.CERT_NONE})
             self.app.run_forever(
                 heartbeat_freq=30,
                 ssl_options={"cert_reqs": ssl.CERT_NONE}
@@ -416,6 +411,7 @@ class WSClient(Dispatcher):
         self.clear_callbacks()
 
     def on_packet(self, packet):
+        """Called with a binary packet."""
         try:
             packet_type = packets.PacketType(packet[0])
             packet_body = packet[1:]
@@ -425,9 +421,11 @@ class WSClient(Dispatcher):
             self.dispatch(packet_type, packet_body)
 
     def channel_write(self, channel, data):
+        """Write data to a virtual channel."""
         self.send(PacketType.request_send, channel=channel, data=data)
 
     def on_instruction(self, sender, data):
+        """Called with an instruction."""
         self.log.debug('instruction from {%s} %r', sender, data)
 
     # --------------------------------------------------------
