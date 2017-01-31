@@ -108,7 +108,7 @@ class AutoConnectThread(threading.Thread):
                     m2m_client.terminate()
                 except Exception as error:
                     log.debug("_m2m_client.terminate: %s", error)
-            self._m2m_client = M2MClient(self.url, log=log, uuid=self._identity)
+            self._m2m_client = M2MClient(self.url, uuid=self._identity)
             self._m2m_client.set_manager(self.manager)
             self._m2m_client.connect(wait=False)
 

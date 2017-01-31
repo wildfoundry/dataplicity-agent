@@ -17,8 +17,8 @@ from .dispatcher import Dispatcher, expose
 from .packets import M2MPacket as Packet
 from .packets import PacketType
 
+
 log = logging.getLogger('m2m')
-server_log = logging.getLogger('m2m.server')
 
 
 class ClientError(Exception):
@@ -157,12 +157,11 @@ class Channel(object):
 class WSApp(WebSocketClient):
     """Wrapper around ws4py interface for WSClient."""
 
-    def __init__(self, url, log, on_open, on_message, on_error, on_close):
+    def __init__(self, url, on_open, on_message, on_error, on_close):
         self.on_open = on_open
         self.on_message = on_message
         self.on_error = on_error
         self.on_close = on_close
-        self.log = log
         super(WSApp, self).__init__(url)
 
     def connect(self):
@@ -177,14 +176,14 @@ class WSApp(WebSocketClient):
         try:
             super(WSApp, self).close(*args, **kwargs)
         except Exception as error:
-            self.log.debug('WSApp.close %s', error)
+            log.debug('WSApp.close %s', error)
 
     def opened(self):
         """Call on_open callback, log errors."""
         try:
             self.on_open(self)
         except Exception as error:
-            self.log.error('WSApp.on_open: %s', error)
+            log.error('WSApp.on_open: %s', error)
 
     def received_message(self, message):
         """Call on_message with binary packets."""
@@ -192,7 +191,7 @@ class WSApp(WebSocketClient):
             if message.is_binary:
                 self.on_message(self, message.data)
         except Exception as error:
-            self.log.error('WSApp.received_message: %s', error)
+            log.error('WSApp.received_message: %s', error)
 
 
     def closed(self, code, reason=None):
@@ -200,13 +199,13 @@ class WSApp(WebSocketClient):
         try:
             self.on_close(self)
         except Exception as error:
-            self.log.error('error on WSApp.closed: %s', error)
+            log.error('error on WSApp.closed: %s', error)
 
 
 class WSClient(Dispatcher):
     """Interface to the M2M server."""
 
-    def __init__(self, url, uuid=None, log=None,
+    def __init__(self, url, uuid=None,
                  channel_callback=None, control_callback=None, **kwargs):
         self.url = url
         self.channel_callback = channel_callback
@@ -216,8 +215,7 @@ class WSClient(Dispatcher):
             on_open=self.on_open,
             on_message=self.on_message,
             on_error=self.on_error,
-            on_close=self.on_close,
-            log=log
+            on_close=self.on_close
         )
 
         self._closed = False
@@ -234,7 +232,7 @@ class WSClient(Dispatcher):
         self.name = "m2m"  # Thread name
         self.daemon = True
 
-        super(WSClient, self).__init__(Packet, log=log)
+        super(WSClient, self).__init__(Packet)
 
 
     def __repr__(self):
@@ -281,7 +279,7 @@ class WSClient(Dispatcher):
                     try:
                         callback(result)
                     except:
-                        self.log.exception('error in command callback')
+                        log.exception('error in command callback')
                 del self.callbacks[command_id]
 
     def clear_callbacks(self):
@@ -292,7 +290,7 @@ class WSClient(Dispatcher):
                     try:
                         callback(None)
                     except:
-                        self.log.exception('error clearing callback')
+                        log.exception('error clearing callback')
 
     def get_channel(self, channel_no):
         # TODO: Create channels in response to packets
@@ -388,7 +386,7 @@ class WSClient(Dispatcher):
     def on_error(self, app, error):
         """Called on WS error."""
         if error:
-            self.log.error("websocket error %r", error)
+            log.error("websocket error %r", error)
         self._closed = True
         self.identity = None
         self.close_event.set()
@@ -403,7 +401,7 @@ class WSClient(Dispatcher):
 
     def on_close(self, app):
         """Called by WS app when socket closes."""
-        self.log.debug('connection closed by peer')
+        log.debug('connection closed by peer')
         self._closed = True
         self.identity = None
         self.close_event.set()
@@ -426,7 +424,7 @@ class WSClient(Dispatcher):
 
     def on_instruction(self, sender, data):
         """Called with an instruction."""
-        self.log.debug('instruction from {%s} %r', sender, data)
+        log.debug('instruction from {%s} %r', sender, data)
 
     # --------------------------------------------------------
     # Packet handlers
@@ -437,7 +435,7 @@ class WSClient(Dispatcher):
         """Server is telling us about our identity."""
         if not self.is_closed:
             self.identity = identity
-            self.log.debug('setting identity to %s', self.identity)
+            log.debug('setting identity to %s', self.identity)
 
     @expose(PacketType.ping)
     def handle_ping(self, packet_type, data):
@@ -452,7 +450,7 @@ class WSClient(Dispatcher):
     @expose(PacketType.log)
     def handle_log(self, packet_type, msg):
         """The server has sent a message for us to write to the logs."""
-        server_log.info(msg)
+        log.info(msg)
 
     @expose(PacketType.route)
     def handle_route(self, packet_type, channel, data):
