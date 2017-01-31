@@ -34,9 +34,9 @@ setup(
     },
 
     install_requires=[
-        'ws4py==0.3.5',
         'enum34==1.1.6',
         'six==1.10.0',
+        'ws4py==0.3.5',
     ],
 
     zip_safe=True
