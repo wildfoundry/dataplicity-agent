@@ -200,8 +200,8 @@ class WSApp(WebSocketClient):
         """Call on_close method, log errors."""
         try:
             self.on_close(self)
-        except Exception as e:
-            self.log.error('error on WSApp.closed')
+        except Exception as error:
+            self.log.error('error on WSApp.closed: %s', error)
 
 
 class WSClient(Dispatcher):
