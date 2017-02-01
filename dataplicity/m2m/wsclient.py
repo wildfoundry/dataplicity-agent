@@ -199,7 +199,7 @@ class WSApp(WebSocketClient):
         try:
             self.on_close(self)
         except Exception as error:
-            log.error('error on WSApp.closed: %s', error)
+            log.error('WSApp.closed: %s', error)
 
     def unhandled_error(self, error):
         """Called by ws4py when there is an error in run_forever."""
@@ -209,7 +209,7 @@ class WSApp(WebSocketClient):
         try:
             self.terminate()
         except Exception as error:
-            log.error('error on WSApp.unhandled_error: %s', error)
+            log.error('WSApp.unhandled_error: %s', error)
 
 
 class WSClient(Dispatcher):
