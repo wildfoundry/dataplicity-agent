@@ -430,6 +430,11 @@ class WSClient(Dispatcher):
     # Packet handlers
     # -------------------------------------------------------
 
+    @expose(PacketType.null)
+    def handle_null(self, packet_type):
+        """Ignore null packet."""
+        # Null packets may be sent just to check the connection
+
     @expose(PacketType.set_identity)
     def handle_set_identity(self, packet_type, identity):
         """Server is telling us about our identity."""
@@ -450,7 +455,7 @@ class WSClient(Dispatcher):
     @expose(PacketType.log)
     def handle_log(self, packet_type, msg):
         """The server has sent a message for us to write to the logs."""
-        log.info(msg)
+        log.debug(msg)
 
     @expose(PacketType.route)
     def handle_route(self, packet_type, channel, data):
