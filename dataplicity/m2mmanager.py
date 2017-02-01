@@ -119,7 +119,7 @@ class AutoConnectThread(threading.Thread):
         while 1:
             # Get the identity, and tell the server about it
             identity = self._identity = self.m2m_client.wait_ready(20)
-            log.info('m2m identity is %r', identity)
+            log.debug('m2m identity is %r', identity)
             self.manager.set_identity(identity)
 
             with self.lock:
@@ -190,6 +190,7 @@ class M2MManager(object):
         """Set the m2m identity, and also notifies the dataplicity server if required."""
         self.identity = identity
         if identity and identity != self.notified_identity:
+            log.info('m2m identity changed (%s)', identity)
             self.notified_identity = self.client.set_m2m_identity(identity)
 
     def on_sync(self, batch):
