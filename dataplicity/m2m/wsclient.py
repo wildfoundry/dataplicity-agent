@@ -201,6 +201,16 @@ class WSApp(WebSocketClient):
         except Exception as error:
             log.error('error on WSApp.closed: %s', error)
 
+    def unhandled_error(self, error):
+        """Called by ws4py when there is an error in run_forever."""
+        # ws4py calls this with any socket errors
+        # Doesn't matter what the socket error is; connection is fubar.
+        log.error('error in WSApp: %s', error)
+        try:
+            self.terminate()
+        except Exception as error:
+            log.error('error on WSApp.unhandled_error: %s', error)
+
 
 class WSClient(Dispatcher):
     """Interface to the M2M server."""
