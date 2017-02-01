@@ -8,7 +8,7 @@ import sys
 import threading
 from collections import defaultdict, deque
 
-import websocket
+from ws4py.client.threadedclient import WebSocketClient
 
 from . import bencode
 from . import packets
@@ -17,8 +17,8 @@ from .dispatcher import Dispatcher, expose
 from .packets import M2MPacket as Packet
 from .packets import PacketType
 
+
 log = logging.getLogger('m2m')
-server_log = logging.getLogger('m2m.server')
 
 
 class ClientError(Exception):
@@ -154,29 +154,69 @@ class Channel(object):
         return ChannelFile(self.client, self.number)
 
 
-class ThreadedDispatcher(threading.Thread, Dispatcher):
-    """Dispatches packets from a thread."""
+class WSApp(WebSocketClient):
+    """Wrapper around ws4py interface for WSClient."""
 
-    def __init__(self, **kwargs):
-        # Why didn't super work here?
-        # Because threading.Thread doesn't call super
-        threading.Thread.__init__(self)
-        Dispatcher.__init__(self, Packet, log=kwargs.get('log'))
+    def __init__(self, url, on_open, on_message, on_error, on_close):
+        self.on_open = on_open
+        self.on_message = on_message
+        self.on_error = on_error
+        self.on_close = on_close
+        super(WSApp, self).__init__(url)
+
+    def connect(self):
+        """Connect the WS, call on_error callback."""
+        try:
+            super(WSApp, self).connect()
+        except Exception as error:
+            self.on_error(self, error)
+
+    def close(self, *args, **kwargs):
+        """Close the WS, log errors."""
+        try:
+            super(WSApp, self).close(*args, **kwargs)
+        except Exception as error:
+            log.debug('WSApp.close %s', error)
+
+    def opened(self):
+        """Call on_open callback, log errors."""
+        try:
+            self.on_open(self)
+        except Exception as error:
+            log.error('WSApp.on_open: %s', error)
+
+    def received_message(self, message):
+        """Call on_message with binary packets."""
+        try:
+            if message.is_binary:
+                self.on_message(self, message.data)
+        except Exception as error:
+            log.error('WSApp.received_message: %s', error)
 
 
-class WSClient(ThreadedDispatcher):
+    def closed(self, code, reason=None):
+        """Call on_close method, log errors."""
+        try:
+            self.on_close(self)
+        except Exception as error:
+            log.error('error on WSApp.closed: %s', error)
+
+
+class WSClient(Dispatcher):
     """Interface to the M2M server."""
 
-    def __init__(self, url, uuid=None, log=None,
+    def __init__(self, url, uuid=None,
                  channel_callback=None, control_callback=None, **kwargs):
         self.url = url
         self.channel_callback = channel_callback
         self.control_callback = control_callback
-        kwargs['on_open'] = self.on_open
-        kwargs['on_message'] = self.on_message
-        kwargs['on_error'] = self.on_error
-        kwargs['on_close'] = self.on_close
-        self.kwargs = kwargs
+        self.app = WSApp(
+            url,
+            on_open=self.on_open,
+            on_message=self.on_message,
+            on_error=self.on_error,
+            on_close=self.on_close
+        )
 
         self._closed = False
         self.identity = uuid
@@ -189,12 +229,11 @@ class WSClient(ThreadedDispatcher):
         self.callbacks = defaultdict(list)
         self.hooks = defaultdict(list)
 
-        super(WSClient, self).__init__(log=log)
         self.name = "m2m"  # Thread name
         self.daemon = True
 
-        self.app = websocket.WebSocketApp(self.url,
-                                          **self.kwargs)
+        super(WSClient, self).__init__(Packet)
+
 
     def __repr__(self):
         """Return the URL."""
@@ -225,7 +264,7 @@ class WSClient(ThreadedDispatcher):
 
     def connect(self, wait=True, timeout=None):
         """Connect and optionally wait until we are ready to communicate with the server."""
-        self.start()
+        self.app.connect()
         if wait:
             return self.wait_ready(timeout=timeout)
         return None
@@ -240,7 +279,7 @@ class WSClient(ThreadedDispatcher):
                     try:
                         callback(result)
                     except:
-                        self.exception('error in command callback')
+                        log.exception('error in command callback')
                 del self.callbacks[command_id]
 
     def clear_callbacks(self):
@@ -251,7 +290,7 @@ class WSClient(ThreadedDispatcher):
                     try:
                         callback(None)
                     except:
-                        self.exception('error clearing callback')
+                        log.exception('error clearing callback')
 
     def get_channel(self, channel_no):
         # TODO: Create channels in response to packets
@@ -274,10 +313,10 @@ class WSClient(ThreadedDispatcher):
     def run(self):
         sockopt = [(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)]
         try:
-            self.app.run_forever(sockopt=sockopt,
-                                 ping_interval=30,
-                                 ping_timeout=10,
-                                 sslopt={"cert_reqs": ssl.CERT_NONE})
+            self.app.run_forever(
+                heartbeat_freq=30,
+                ssl_options={"cert_reqs": ssl.CERT_NONE}
+            )
         except (SystemExit, KeyboardInterrupt):
             log.info('wsclient exit requested')
         except:
@@ -320,10 +359,11 @@ class WSClient(ThreadedDispatcher):
         packet_bytes = packet.encode_binary()
         self.send_bytes(packet_bytes)
 
+
     def send_bytes(self, packet_bytes):
         """Send bytes over the websocket."""
         with self.write_lock:
-            self.app.sock.send_binary(packet_bytes)
+            self.app.send(packet_bytes, binary=True)
 
     def on_open(self, app):
         """Called when WS is opened."""
@@ -346,7 +386,7 @@ class WSClient(ThreadedDispatcher):
     def on_error(self, app, error):
         """Called on WS error."""
         if error:
-            self.log.error("websocket error %r", error)
+            log.error("websocket error %r", error)
         self._closed = True
         self.identity = None
         self.close_event.set()
@@ -354,14 +394,14 @@ class WSClient(ThreadedDispatcher):
         self.hard_close_channels()
         self.clear_callbacks()
         try:
-            # Not entirely sure if this is neccesary
+            # Not entirely sure if this is necessary
             self.app.close()
         except:
             log.exception('error closing ws app in on_error')
 
     def on_close(self, app):
         """Called by WS app when socket closes."""
-        self.log.debug('connection closed by peer')
+        log.debug('connection closed by peer')
         self._closed = True
         self.identity = None
         self.close_event.set()
@@ -369,6 +409,7 @@ class WSClient(ThreadedDispatcher):
         self.clear_callbacks()
 
     def on_packet(self, packet):
+        """Called with a binary packet."""
         try:
             packet_type = packets.PacketType(packet[0])
             packet_body = packet[1:]
@@ -378,10 +419,12 @@ class WSClient(ThreadedDispatcher):
             self.dispatch(packet_type, packet_body)
 
     def channel_write(self, channel, data):
+        """Write data to a virtual channel."""
         self.send(PacketType.request_send, channel=channel, data=data)
 
     def on_instruction(self, sender, data):
-        self.log.debug('instruction from {%s} %r', sender, data)
+        """Called with an instruction."""
+        log.debug('instruction from {%s} %r', sender, data)
 
     # --------------------------------------------------------
     # Packet handlers
@@ -392,7 +435,7 @@ class WSClient(ThreadedDispatcher):
         """Server is telling us about our identity."""
         if not self.is_closed:
             self.identity = identity
-            self.log.debug('setting identity to %s', self.identity)
+            log.debug('setting identity to %s', self.identity)
 
     @expose(PacketType.ping)
     def handle_ping(self, packet_type, data):
@@ -407,7 +450,7 @@ class WSClient(ThreadedDispatcher):
     @expose(PacketType.log)
     def handle_log(self, packet_type, msg):
         """The server has sent a message for us to write to the logs."""
-        server_log.info(msg)
+        log.info(msg)
 
     @expose(PacketType.route)
     def handle_route(self, packet_type, channel, data):
