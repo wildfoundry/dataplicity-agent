@@ -171,10 +171,10 @@ class WSApp(WebSocketClient):
         except Exception as error:
             self.on_error(self, error)
 
-    def close(self, *args, **kwargs):
+    def close(self, code=1000, reason=''):
         """Close the WS, log errors."""
         try:
-            super(WSApp, self).close(*args, **kwargs)
+            super(WSApp, self).close(code=code, reason=reason)
         except Exception as error:
             log.debug('WSApp.close %s', error)
 
@@ -208,8 +208,18 @@ class WSApp(WebSocketClient):
         log.error('error in WSApp: %s', error)
         try:
             self.terminate()
-        except Exception as error:
-            log.error('WSApp.unhandled_error: %s', error)
+        except Exception as terminate_error:
+            log.error('WSApp.unhandled_error: %s', terminate_error)
+
+    def close_connection(self):
+        try:
+            super(WSApp, self).close_connection()
+        finally:
+            try:
+                self.on_close(self)
+            except Exception as error:
+                log.error('close_connection WSApp.closed: %s', error)
+
 
 
 class WSClient(Dispatcher):
@@ -373,7 +383,11 @@ class WSClient(Dispatcher):
     def send_bytes(self, packet_bytes):
         """Send bytes over the websocket."""
         with self.write_lock:
-            self.app.send(packet_bytes, binary=True)
+            if self.app.client_terminated:
+                self.app.send(packet_bytes, binary=True)
+                return True
+            else:
+                return False
 
     def on_open(self, app):
         """Called when WS is opened."""
