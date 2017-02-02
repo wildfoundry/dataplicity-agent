@@ -384,10 +384,10 @@ class WSClient(Dispatcher):
         """Send bytes over the websocket."""
         with self.write_lock:
             if self.app.client_terminated:
+                return False
+            else:
                 self.app.send(packet_bytes, binary=True)
                 return True
-            else:
-                return False
 
     def on_open(self, app):
         """Called when WS is opened."""
