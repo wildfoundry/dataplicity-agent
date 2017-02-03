@@ -163,6 +163,7 @@ class WSApp(WebSocketClient):
         self.on_error = on_error
         self.on_close = on_close
         super(WSApp, self).__init__(url)
+        self.sock.settimeout(10.0)
 
     def connect(self):
         """Connect the WS, call on_error callback."""
@@ -252,7 +253,7 @@ class WSClient(Dispatcher):
         self.name = "m2m"  # Thread name
         self.daemon = True
 
-        super(WSClient, self).__init__(Packet)
+        super(WSClient, self).__init__(Packet, log=log)
 
 
     def __repr__(self):
