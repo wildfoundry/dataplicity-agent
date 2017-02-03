@@ -6,6 +6,7 @@ import socket
 import ssl
 import sys
 import threading
+import time
 from collections import defaultdict, deque
 
 from ws4py.client.threadedclient import WebSocketClient
@@ -16,6 +17,7 @@ from ..compat import text_type
 from .dispatcher import Dispatcher, expose
 from .packets import M2MPacket as Packet
 from .packets import PacketType
+from .. import constants
 
 
 log = logging.getLogger('m2m')
@@ -189,8 +191,7 @@ class WSApp(WebSocketClient):
     def received_message(self, message):
         """Call on_message with binary packets."""
         try:
-            if message.is_binary:
-                self.on_message(self, message.data)
+            self.on_message(self, message)
         except Exception as error:
             log.error('WSApp.received_message: %s', error)
 
@@ -213,6 +214,7 @@ class WSApp(WebSocketClient):
             log.error('WSApp.unhandled_error: %s', terminate_error)
 
     def close_connection(self):
+        log.debug('close_connection called')
         try:
             super(WSApp, self).close_connection()
         finally:
@@ -242,6 +244,7 @@ class WSClient(Dispatcher):
         self._closed = False
         self.identity = uuid
         self.channels = {}
+        self.last_packet_time = time.time()
 
         self.callback_lock = threading.RLock()
         self.write_lock = threading.Lock()
@@ -282,6 +285,20 @@ class WSClient(Dispatcher):
     def open_channels(self):
         """List of open channels."""
         return self.channels.keys()
+
+    @property
+    def time_since_last_packet(self):
+        """Time, in seconds, since the last packet."""
+        return time.time() - self.last_packet_time
+
+    @property
+    def is_responding(self):
+        """Check the server is still responding."""
+        if self.is_closed:
+            return False
+        if constants.MAX_TIME_SINCE_LAST_PACKET is None:
+            return True
+        return self.time_since_last_packet < constants.MAX_TIME_SINCE_LAST_PACKET
 
     def connect(self, wait=True, timeout=None):
         """Connect and optionally wait until we are ready to communicate with the server."""
@@ -399,14 +416,19 @@ class WSClient(Dispatcher):
             else:
                 self.send(PacketType.request_identify, uuid=self.identity)
 
-    def on_message(self, app, data):
+    def on_message(self, app, message):
         """On a WS message."""
-        try:
-            packet = bencode.decode(data)
-        except:
-            log.exception('packet could not be decoded')
+        self.last_packet_time = time.time()
+        if message.is_binary:
+            data = message.data
+            try:
+                packet = bencode.decode(data)
+            except:
+                log.exception('packet could not be decoded')
+            else:
+                self.on_packet(packet)
         else:
-            self.on_packet(packet)
+            log.debug('recieved ws message %r', message)
 
     def on_error(self, app, error):
         """Called on WS error."""

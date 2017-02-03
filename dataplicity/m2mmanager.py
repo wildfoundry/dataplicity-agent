@@ -124,7 +124,7 @@ class AutoConnectThread(threading.Thread):
 
             with self.lock:
                 # If we aren't connected, kick off the connect process
-                if not identity or self.m2m_client.is_closed:
+                if not identity or not self.m2m_client.is_responding:
                     self.start_connect()
 
             # We are connected, so wait on the exit event
