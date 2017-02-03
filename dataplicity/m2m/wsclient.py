@@ -418,6 +418,7 @@ class WSClient(Dispatcher):
 
     def on_message(self, app, message):
         """On a WS message."""
+        log.debug('received ws message %r', message)
         self.last_packet_time = time.time()
         if message.is_binary:
             data = message.data
@@ -427,8 +428,6 @@ class WSClient(Dispatcher):
                 log.exception('packet could not be decoded')
             else:
                 self.on_packet(packet)
-        else:
-            log.debug('recieved ws message %r', message)
 
     def on_error(self, app, error):
         """Called on WS error."""

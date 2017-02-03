@@ -119,12 +119,18 @@ class AutoConnectThread(threading.Thread):
         while 1:
             # Get the identity, and tell the server about it
             identity = self._identity = self.m2m_client.wait_ready(20)
+            log.debug('%0.1fs since last packet', self.m2m_client.time_since_last_packet)
+            log.debug('responding=%r', self.m2m_client.is_responding)
             log.debug('m2m identity is %r', identity)
-            self.manager.set_identity(identity)
+            try:
+                self.manager.set_identity(identity)
+            except:
+                log.exception('failed to set_identity')
 
             with self.lock:
                 # If we aren't connected, kick off the connect process
                 if not identity or not self.m2m_client.is_responding:
+                    log.debug('re-connecting...')
                     self.start_connect()
 
             # We are connected, so wait on the exit event
