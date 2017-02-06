@@ -214,6 +214,9 @@ class WSApp(WebSocketClient):
             log.error('WSApp.unhandled_error: %s', terminate_error)
 
     def close_connection(self):
+        """Close WS connection."""
+        # Implement close_connection in order to invoke on_close
+        # when the heartbeat thread fails.
         log.debug('close_connection called')
         try:
             super(WSApp, self).close_connection()
