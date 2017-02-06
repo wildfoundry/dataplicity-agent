@@ -98,4 +98,4 @@ class Dispatcher(object):
 
     def on_missing_handler(self, packet):
         """Called when no handler is available to handle `packet`"""
-        self.log.error('missing handler for %r', packet)
+        self.log.debug('missing handler for %r', packet)

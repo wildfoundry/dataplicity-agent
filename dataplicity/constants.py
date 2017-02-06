@@ -8,3 +8,6 @@ SERVER_URL = environ.get('DATAPLICITY_API_URL', "https://api.dataplicity.com")
 M2M_URL = environ.get('DATAPLICITY_M2M_URL', "wss://m2m.dataplicity.com/m2m/")
 SERIAL_LOCATION = '/opt/dataplicity/tuxtunnel/serial'
 AUTH_LOCATION = '/opt/dataplicity/tuxtunnel/auth'
+
+# Client will reconnect if the server hasn't responded in this time
+MAX_TIME_SINCE_LAST_PACKET = 120.0  # seconds or None
