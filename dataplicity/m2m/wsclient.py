@@ -388,6 +388,10 @@ class WSClient(Dispatcher):
         self.ready_event.wait(timeout)
         return self.identity
 
+    def terminate(self):
+        """Terminate the websocket."""
+        self.app.terminate()
+
     def send(self, packet, *args, **kwargs):
         """Send a packet. Will encode if necessary."""
         if isinstance(packet, (bytes, text_type)):
