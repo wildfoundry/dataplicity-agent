@@ -128,6 +128,13 @@ class AutoConnectThread(threading.Thread):
                 log.exception('failed to set_identity')
 
             with self.lock:
+
+                if abs(self.m2m_client.time_since_last_packet) > 300:
+                    log.info('clock change detected')
+                    log.info('restarting...')
+                    self.manager.restart_agent()
+                    return
+
                 # If we aren't connected, kick off the connect process
                 if not identity or not self.m2m_client.is_responding:
                     log.debug('re-connecting...')
@@ -186,6 +193,10 @@ class M2MManager(object):
         manager = cls(client, url)
         manager.add_terminal('shell', 'bash -i')
         return manager
+
+    def restart_agent(self):
+        """Restart the agent."""
+        self.client.exit()
 
     def on_client_close(self):
         """Client is closing, shutdown all terminals."""

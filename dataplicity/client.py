@@ -78,6 +78,10 @@ class Client(object):
             self.close()
             log.debug('goodbye')
 
+    def exit(self):
+        """Exit the agent."""
+        self.exit_event.set()
+
     def disk_poll(self):
         now = time.time()
 
