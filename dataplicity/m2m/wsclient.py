@@ -373,9 +373,7 @@ class WSClient(Dispatcher):
         if not self._closed and self.ready_event.is_set():
             self.send(PacketType.request_leave)
             if timeout:
-                print("WSClient.close wait in")
                 self.close_event.wait(timeout)
-                print("WSClient.close wait out")
             self.clear_callbacks()
         self._closed = True
         self.identity = None
@@ -386,9 +384,7 @@ class WSClient(Dispatcher):
         """Wait until the server is ready, and return identity."""
         # Q. What are we waiting for?
         # A. Establishing a m2m connection, and for the server to send us an identity.
-        print("WSClient.wait_ready in")
         self.ready_event.wait(timeout)
-        print("WSClient.wait_ready out")
         return self.identity
 
     def terminate(self):

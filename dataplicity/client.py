@@ -69,11 +69,8 @@ class Client(object):
 
         try:
             self.poll()
-            print("Client.run_forever in")
             while not self.exit_event.wait(self.poll_rate_seconds):
-                print('run exit_event out')
                 self.poll()
-            print('run exit_event out 2')
         except SystemExit:
             log.debug('exit requested')
             return

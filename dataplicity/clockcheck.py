@@ -34,7 +34,7 @@ class ClockCheckThread(Thread):
             sleep(CHECK_PERIOD)
             elapsed = time() - start
 
-            if abs(elapsed) > MAX_CLOCK_DISCREPENCY:
+            if elapsed > MAX_CLOCK_DISCREPENCY:
                 self.on_fail()
 
     def on_fail(self):

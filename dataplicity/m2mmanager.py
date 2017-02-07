@@ -142,12 +142,10 @@ class AutoConnectThread(threading.Thread):
 
             # We are connected, so wait on the exit event
             # The timeout prevents hammering of the server
-            print('run exit_event in')
-            try:
-                if self.exit_event.wait(15.0):
-                    break
-            finally:
-                print('run exit_event out')
+
+            if self.exit_event.wait(15.0):
+                break
+
 
         # Tell the server we are no longer connected to m2m
         self.manager.set_identity(None)
