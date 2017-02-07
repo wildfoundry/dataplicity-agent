@@ -1,3 +1,14 @@
+"""
+On RPi, threading.Event objects block indefinitely when the clock
+changes, which causes agent to hang. This thread kills the current
+process when the clock changes. Supervisor will then restart agent,
+and we will recover.
+
+It's not nice at all. Probably the result of an OS bug. Hopefully,
+there will be a better solution in future.
+
+"""
+
 import os
 import signal
 from time import sleep, time
@@ -26,9 +37,8 @@ class ClockCheckThread(Thread):
             if abs(elapsed) > MAX_CLOCK_DISCREPENCY:
                 self.on_fail()
 
-
     def on_fail(self):
         """Clock has changed, kill the current process."""
         # Supervisor will restart the agent.
-        pid = os.getpgid(0)
+        pid = os.getpid()
         os.kill(pid, signal.SIGKILL)
