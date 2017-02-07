@@ -355,7 +355,6 @@ class WSClient(Dispatcher):
         sockopt = [(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)]
         try:
             self.app.run_forever(
-                heartbeat_freq=30,
                 ssl_options={"cert_reqs": ssl.CERT_NONE}
             )
         except (SystemExit, KeyboardInterrupt):
@@ -390,7 +389,10 @@ class WSClient(Dispatcher):
 
     def terminate(self):
         """Terminate the websocket."""
-        self.app.terminate()
+        try:
+            self.app.terminate()
+        except:
+            log.exception('error in terminate %s')
 
     def send(self, packet, *args, **kwargs):
         """Send a packet. Will encode if necessary."""
@@ -411,7 +413,11 @@ class WSClient(Dispatcher):
             if self.app.client_terminated:
                 return False
             else:
-                self.app.send(packet_bytes, binary=True)
+                try:
+                    self.app.send(packet_bytes, binary=True)
+                except:
+                    log.exception('error in send_bytes')
+                    self.terminate()
                 return True
 
     def on_open(self, app):
