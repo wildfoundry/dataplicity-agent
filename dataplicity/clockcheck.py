@@ -1,8 +1,8 @@
 """
 On RPi, threading.Event objects block indefinitely when the clock
-changes, which causes agent to hang. This thread kills the current
+changes, causing agent to hang. This thread kills the current
 process when the clock changes. Supervisor will then restart agent,
-and we will recover.
+and we can recover.
 
 It's not nice at all. Probably the result of an OS bug. Hopefully,
 there will be a better solution in future.
