@@ -139,7 +139,6 @@ class AutoConnectThread(threading.Thread):
 
             # We are connected, so wait on the exit event
             # The timeout prevents hammering of the server
-
             if self.exit_event.wait(15.0):
                 break
 
