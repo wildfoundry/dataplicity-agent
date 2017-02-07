@@ -131,9 +131,6 @@ class AutoConnectThread(threading.Thread):
 
                 if abs(self.m2m_client.time_since_last_packet) > 300:
                     log.info('clock change detected')
-                    log.info('restarting...')
-                    self.manager.restart_agent()
-                    return
 
                 # If we aren't connected, kick off the connect process
                 if not identity or not self.m2m_client.is_responding:
