@@ -128,6 +128,10 @@ class AutoConnectThread(threading.Thread):
                 log.exception('failed to set_identity')
 
             with self.lock:
+
+                if abs(self.m2m_client.time_since_last_packet) > 300:
+                    log.info('clock change detected')
+
                 # If we aren't connected, kick off the connect process
                 if not identity or not self.m2m_client.is_responding:
                     log.debug('re-connecting...')
@@ -137,6 +141,7 @@ class AutoConnectThread(threading.Thread):
             # The timeout prevents hammering of the server
             if self.exit_event.wait(15.0):
                 break
+
 
         # Tell the server we are no longer connected to m2m
         self.manager.set_identity(None)
@@ -187,6 +192,10 @@ class M2MManager(object):
         manager.add_terminal('shell', 'bash -i')
         return manager
 
+    def restart_agent(self):
+        """Restart the agent."""
+        self.client.exit()
+
     def on_client_close(self):
         """Client is closing, shutdown all terminals."""
         for terminal in self.terminals.values():
@@ -196,7 +205,7 @@ class M2MManager(object):
         """Set the m2m identity, and also notifies the dataplicity server if required."""
         self.identity = identity
         if identity and identity != self.notified_identity:
-            log.info('m2m identity changed (%s)', identity)
+            log.info('m2m identity changed (%r)', identity)
             self.notified_identity = self.client.set_m2m_identity(identity)
 
     def on_sync(self, batch):
