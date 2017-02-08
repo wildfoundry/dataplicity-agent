@@ -213,8 +213,8 @@ class WSApp(WebSocketClient):
 
         try:
             self.on_close(self)
-        except Exception as error:
-            log.error('WSApp.unhandler_error on_close: %s', error)
+        except Exception as close_error:
+            log.error('WSApp.unhandler_error on_close: %s', close_error)
 
     def close_connection(self):
         """Close WS connection."""
