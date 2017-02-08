@@ -195,7 +195,6 @@ class WSApp(WebSocketClient):
         except Exception as error:
             log.error('WSApp.received_message: %s', error)
 
-
     def closed(self, code, reason=None):
         """Call on_close method, log errors."""
         try:
@@ -208,10 +207,14 @@ class WSApp(WebSocketClient):
         # ws4py calls this with any socket errors
         # Doesn't matter what the socket error is; connection is fubar.
         log.error('error in WSApp: %s', error)
+        # Can't terminate here
+        # Trick the server in to exiting
+        self.server_terminated = True
+
         try:
-            self.terminate()
-        except Exception as terminate_error:
-            log.error('WSApp.unhandled_error: %s', terminate_error)
+            self.on_close(self)
+        except Exception as error:
+            log.error('WSApp.unhandler_error on_close: %s', error)
 
     def close_connection(self):
         """Close WS connection."""
@@ -224,8 +227,7 @@ class WSApp(WebSocketClient):
             try:
                 self.on_close(self)
             except Exception as error:
-                log.error('close_connection WSApp.closed: %s', error)
-
+                log.error('WSApp.close_connection on_close: %s', error)
 
 
 class WSClient(Dispatcher):
@@ -255,6 +257,7 @@ class WSClient(Dispatcher):
         self.close_event = threading.Event()
         self.callbacks = defaultdict(list)
         self.hooks = defaultdict(list)
+        self._abandoned = False
 
         self.name = "m2m"  # Thread name
         self.daemon = True
@@ -309,6 +312,16 @@ class WSClient(Dispatcher):
         if wait:
             return self.wait_ready(timeout=timeout)
         return None
+
+    def abandon(self):
+        """Stop all processing due to connection drop."""
+        log.debug('WSClient.abandon')
+        self._abandoned = True
+        self._closed = True
+        self.identity = None
+        self.close_event.set()
+        self.ready_event.set()
+        self.clear_callbacks()
 
     def add_callback(self, command_id, callback):
         self.callbacks[command_id].append(callback)
@@ -390,7 +403,8 @@ class WSClient(Dispatcher):
     def terminate(self):
         """Terminate the websocket."""
         try:
-            self.app.terminate()
+            # Trick ws4py in to exiting its loop
+            self.app.server_terminated = True
         except:
             log.exception('error in terminate %s')
 
@@ -406,11 +420,11 @@ class WSClient(Dispatcher):
         packet_bytes = packet.encode_binary()
         self.send_bytes(packet_bytes)
 
-
     def send_bytes(self, packet_bytes):
         """Send bytes over the websocket."""
         with self.write_lock:
             if self.app.client_terminated:
+                log.debug('send_bytes ignored')
                 return False
             else:
                 try:
@@ -460,7 +474,7 @@ class WSClient(Dispatcher):
 
     def on_close(self, app):
         """Called by WS app when socket closes."""
-        log.debug('connection closed by peer')
+        log.debug('on_close... connection closed by peer')
         self._closed = True
         self.identity = None
         self.close_event.set()

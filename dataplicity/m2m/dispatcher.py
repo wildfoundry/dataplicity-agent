@@ -49,9 +49,15 @@ class Dispatcher(object):
         self._packet_cls = packet_cls
         self._packet_handlers = {}
         self._init_dispatcher()
+        self._dispatch_enabled = True
 
     def set_packet_class(self, packet_cls):
         self._packet_cls = packet_cls
+
+    def disable(self):
+        """Prevent all further packet dispatch."""
+        self._dispatch_enabled = False
+        self._packet_handlers.clear()
 
     def _init_dispatcher(self):
         for method_name in dir(self._handler_instance):
@@ -64,6 +70,8 @@ class Dispatcher(object):
 
     def dispatch(self, packet_type, packet_body):
         """Dispatch a packet to appropriate handler"""
+        if not self._dispatch_enabled:
+            return
         if not isinstance(packet_type, int):
             raise PacketFormatError('packet type should be an int')
         assert self._packet_cls is not None, "packet class must be set with set_packet_class"

@@ -96,19 +96,28 @@ class AutoConnectThread(threading.Thread):
 
     def close(self):
         """Close and end the auto-connect thread."""
+        log.debug("AutoConnectThread.close")
         self.exit_event.set()
 
     def start_connect(self):
+        log.debug('start_connect')
         with self.lock:
             log.debug('connecting to %s', self.url)
             if self._m2m_client is not None:
                 m2m_client = self._m2m_client
                 self._m2m_client = None
                 try:
+                    log.debug('calling m2m_client.disable')
+                    m2m_client.disable()
+                    log.debug('calling m2m_client.terminate')
                     m2m_client.terminate()
                 except Exception as error:
                     log.debug("_m2m_client.terminate: %s", error)
+
+            log.debug('create new M2MClient')
             self._m2m_client = M2MClient(self.url, uuid=self._identity)
+            log.debug('M2M instance %r', self._m2m_client)
+
             self._m2m_client.set_manager(self.manager)
             self._m2m_client.connect(wait=False)
 
@@ -118,27 +127,35 @@ class AutoConnectThread(threading.Thread):
 
         while 1:
             # Get the identity, and tell the server about it
+            log.debug('1')
             identity = self._identity = self.m2m_client.wait_ready(20)
             log.debug('%0.1fs since last packet', self.m2m_client.time_since_last_packet)
             log.debug('responding=%r', self.m2m_client.is_responding)
             log.debug('m2m identity is %r', identity)
             try:
+                log.debug('2')
                 self.manager.set_identity(identity)
             except:
                 log.exception('failed to set_identity')
 
+            log.debug('3')
             with self.lock:
 
+                log.debug('4')
                 if abs(self.m2m_client.time_since_last_packet) > 300:
                     log.info('clock change detected')
 
+                log.debug('5')
                 # If we aren't connected, kick off the connect process
                 if not identity or not self.m2m_client.is_responding:
+                    log.debug('6')
                     log.debug('re-connecting...')
                     self.start_connect()
+                    log.debug('7')
 
             # We are connected, so wait on the exit event
             # The timeout prevents hammering of the server
+            log.debug('8')
             if self.exit_event.wait(15.0):
                 break
 
@@ -161,11 +178,17 @@ class M2MClient(WSClient):
         return getattr(self, '_manager', None)
 
     def on_instruction(self, sender, data):
-        self.manager.on_instruction(sender, data)
+        if self.manager is not None:
+            self.manager.on_instruction(sender, data)
 
     def on_close(self, app):
-        super(M2MClient, self).on_close(app)
-        self.manager.on_client_close()
+        if self.manager is not None:
+            super(M2MClient, self).on_close(app)
+            self.manager.on_client_close()
+
+    def abandon(self):
+        self._manager = None
+        super(M2MClient, self).abandon()
 
 
 class M2MManager(object):
