@@ -495,6 +495,7 @@ class WSClient(Dispatcher):
         except:
             log.exception('packet is badly formatted')
         else:
+            log.debug("packet %r %r", packet_type, packet_body[:30])
             self.dispatch(packet_type, packet_body)
 
     def channel_write(self, channel, data):

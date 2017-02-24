@@ -80,9 +80,9 @@ class Dispatcher(object):
         return self.dispatch_packet(packet)
 
     def dispatch_packet(self, packet):
-        if not getattr(packet, 'no_log', False):
-            self.log.debug('received %r', packet)
+        self.log.debug('received %r', packet)
         packet_type = packet.type
+
         method = self._packet_handlers.get(packet_type, None)
 
         if method is None:
