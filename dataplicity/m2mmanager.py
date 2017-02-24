@@ -127,35 +127,26 @@ class AutoConnectThread(threading.Thread):
 
         while 1:
             # Get the identity, and tell the server about it
-            log.debug('1')
             identity = self._identity = self.m2m_client.wait_ready(20)
             log.debug('%0.1fs since last packet', self.m2m_client.time_since_last_packet)
             log.debug('responding=%r', self.m2m_client.is_responding)
             log.debug('m2m identity is %r', identity)
             try:
-                log.debug('2')
                 self.manager.set_identity(identity)
             except:
                 log.exception('failed to set_identity')
 
-            log.debug('3')
             with self.lock:
-
-                log.debug('4')
                 if abs(self.m2m_client.time_since_last_packet) > 300:
                     log.info('clock change detected')
 
-                log.debug('5')
                 # If we aren't connected, kick off the connect process
                 if not identity or not self.m2m_client.is_responding:
-                    log.debug('6')
                     log.debug('re-connecting...')
                     self.start_connect()
-                    log.debug('7')
 
             # We are connected, so wait on the exit event
             # The timeout prevents hammering of the server
-            log.debug('8')
             if self.exit_event.wait(15.0):
                 break
 
@@ -226,6 +217,7 @@ class M2MManager(object):
 
     def set_identity(self, identity):
         """Set the m2m identity, and also notifies the dataplicity server if required."""
+        log.debug('setting identity to %r, current=%r', identity, self.identity)
         self.identity = identity
         if identity and identity != self.notified_identity:
             log.info('m2m identity changed (%r)', identity)
@@ -236,6 +228,7 @@ class M2MManager(object):
         # Send the m2m identity on every sync
         # This shouldn't be necessary, but could mitigate any screw ups server side
         # NOTE: not currently called in agent
+        log.debug('identity=%r', self.identity)
         if self.identity:
             log.debug('syncing m2m identity (%s)', self.identity)
             batch.notify('m2m.associate', identity=self.identity)

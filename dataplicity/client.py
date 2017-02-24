@@ -145,6 +145,7 @@ class Client(object):
         """Perform sync."""
         # Syncing is a much simpler process in Dataplicity agent,
         # than previous versions.
+        log.debug('_sync')
         start = time.time()
         sync_id = self.make_sync_id()
         try:
@@ -221,11 +222,6 @@ class Client(object):
         or None if it could not be set.
 
         """
-        if self.auth_token is None:
-            if not self.disable_sync:
-                log.debug("skipping m2m identity notify because we don't have an auth token")
-            return None
-
         try:
             log.debug('notiying server (%s) of m2m identity (%s)',
                       self.remote.url,
@@ -240,14 +236,26 @@ class Client(object):
                                    'm2m.associate',
                                    identity=identity or '')
             # These methods may potentially throw JSONRPCErrors
-            batch.get_result('authenticate_result')
-            batch.get_result('associate_result')
+            auth_result = batch.get_result('authenticate_result')
+            assoc_result = batch.get_result('associate_result')
+            log.debug('auth result=%r', auth_result)
+            log.debug('assoc result=%r', assoc_result)
+
+            if assoc_result.get('status') != 'success':
+                log.debug('associate failed')
+                return None
+
+            identity = assoc_result.get('identity')
+            log.debug('associate returned %r', identity)
+            return identity
+
         except jsonrpc.JSONRPCError as e:
             log.error('unable to associate m2m identity ("%s"=%s, "%s")',
                       e.method, e.code, e.message)
             return None
         except jsonrpc.ServerUnreachableError as e:
             log.debug('set m2m identity failed, %s', e)
+            return None
         except Exception as error:
             log.error('unable to set m2m identity: %s', error)
             return None
