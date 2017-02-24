@@ -107,10 +107,12 @@ class AutoConnectThread(threading.Thread):
                 m2m_client = self._m2m_client
                 self._m2m_client = None
                 try:
-                    log.debug('calling m2m_client.disable')
-                    m2m_client.disable()
-                    log.debug('calling m2m_client.terminate')
-                    m2m_client.terminate()
+                    try:
+                        log.debug('calling m2m_client.abandon')
+                        m2m_client.abandon()
+                    finally:
+                        log.debug('calling m2m_client.terminate')
+                        m2m_client.terminate()
                 except Exception as error:
                     log.debug("_m2m_client.terminate: %s", error)
 
@@ -129,8 +131,11 @@ class AutoConnectThread(threading.Thread):
             # Get the identity, and tell the server about it
             identity = self._identity = self.m2m_client.wait_ready(20)
             log.debug('%0.1fs since last packet', self.m2m_client.time_since_last_packet)
-            log.debug('responding=%r', self.m2m_client.is_responding)
-            log.debug('m2m identity is %r', identity)
+            log.debug(
+                'm2m identity is %r, responding=%r',
+                identity,
+                self.m2m_client.is_responding
+            )
             try:
                 self.manager.set_identity(identity)
             except:
