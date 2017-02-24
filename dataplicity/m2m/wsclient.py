@@ -322,6 +322,7 @@ class WSClient(Dispatcher):
         self.close_event.set()
         self.ready_event.set()
         self.clear_callbacks()
+        self.disable()
 
     def add_callback(self, command_id, callback):
         self.callbacks[command_id].append(callback)
@@ -445,7 +446,12 @@ class WSClient(Dispatcher):
 
     def on_message(self, app, message):
         """On a WS message."""
-        log.debug('received ws message %r', message)
+        log.debug(
+            'received %r opcode=%r encoding=%r',
+            message,
+            message.opcode,
+            message.encoding
+        )
         self.last_packet_time = time.time()
         if message.is_binary:
             data = message.data
