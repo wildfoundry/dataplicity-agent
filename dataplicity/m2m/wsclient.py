@@ -11,6 +11,12 @@ from collections import defaultdict, deque
 
 from ws4py.client.threadedclient import WebSocketClient
 
+try:
+    from OpenSSL.SSL import Error as pyOpenSSLError
+except ImportError:
+    class pyOpenSSLError(Exception):
+        pass
+
 from . import bencode
 from . import packets
 from ..compat import text_type
@@ -173,6 +179,37 @@ class WSApp(WebSocketClient):
             super(WSApp, self).connect()
         except Exception as error:
             self.on_error(self, error)
+
+    # This works around a buggy method in ws4py
+    def once(self):
+        """
+        Performs the operation of reading from the underlying
+        connection in order to feed the stream of bytes.
+
+        We start with a small size of two bytes to be read
+        from the connection so that we can quickly parse an
+        incoming frame header. Then the stream indicates
+        whatever size must be read from the connection since
+        it knows the frame payload length.
+
+        It returns `False` if an error occurred at the
+        socket level or during the bytes processing. Otherwise,
+        it returns `True`.
+        """
+        if self.terminated:
+            return False
+
+        try:
+            b = self.sock.recv(self.reading_buffer_size)
+        except (socket.error, OSError, pyOpenSSLError) as e:
+            self.unhandled_error(e)
+            return False
+        else:
+            if not self.process(b):
+                return False
+
+        return True
+
 
     def close(self, code=1000, reason=''):
         """Close the WS, log errors."""
