@@ -271,7 +271,7 @@ class M2MManager(object):
             self.open_echo_service(port)
         elif action == 'open-portforward':
             service = data['service']
-            local_port = int(data['port'])
+            local_port = int(data.get('port', -1))
             route = data['route']
             self.open_portforward(service, route, local_port=local_port)
         elif action == 'reboot-device':

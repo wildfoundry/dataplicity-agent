@@ -285,7 +285,7 @@ class PortForwardManager(object):
 
     def get_service_on_port(self, port):
         """Get the service on a numbered port."""
-        service_name = self._ports.get('port')
+        service_name = self._ports.get(port)
         if service_name is None:
             return None
         return self._services[service_name]
@@ -316,12 +316,16 @@ class PortForwardManager(object):
         if service is None and port is None:
             raise ValueError("one of service or port is required")
         if port is not None:
+            if port < 0:
+                raise ValueError("you are trying to forward port but you haven't specified it")  # noqa
             service = self.get_service_on_port(port or 80)
         elif service is not None:
             service = self.get_service(service)
         if service is None:
             # this service is not yet forwarded.
             # add it to list of handled services
+            if port < 0:
+                raise ValueError("you are trying to forward port but you haven't specified it")  # noqa
             self.add_service(service_name, port)
             service = self._services[service_name]
 
