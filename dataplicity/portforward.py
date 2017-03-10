@@ -301,10 +301,10 @@ class PortForwardManager(object):
         self._ports[port] = name
         log.debug("added port forward service '%s' on port %s", name, port)
 
-    def open_service(self, service, route, local_port):
+    def open_service(self, service, route, device_port=None):
         log.debug('opening service %s on %r', service, route)
         node1, port1, node2, port2 = route
-        self.open(port2, service, port=local_port)
+        self.open(port2, service, port=device_port)
 
     def open(self, m2m_port, service=None, port=None):
         """Open a port forward service."""
@@ -316,17 +316,15 @@ class PortForwardManager(object):
         if service is None and port is None:
             raise ValueError("one of service or port is required")
         if port is not None:
-            if port < 0:
-                raise ValueError("you are trying to forward port but you haven't specified it")  # noqa
             service = self.get_service_on_port(port or 80)
         elif service is not None:
             service = self.get_service(service)
         if service is None:
             # this service is not yet forwarded.
             # add it to list of handled services
-            if port < 0:
+            if not port or (isinstance(port, str) and not port.isdigit()):
                 raise ValueError("you are trying to forward port but you haven't specified it")  # noqa
-            self.add_service(service_name, port)
+            self.add_service(service_name, int(port))
             service = self._services[service_name]
 
         service.connect(m2m_port)
