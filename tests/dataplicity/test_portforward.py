@@ -24,9 +24,9 @@ def test_open_service_which_doesnt_exist_yet(manager, route):
         assert manager.get_service('new-service') is None
         assert manager.get_service_on_port(1234) is None
 
-        manager.open_service('new-service', route, 1234)
+        manager.open_service('port-1234', route)
         # this method will be called at the very end of `open()` call
         assert connect.called
-        _service = manager.get_service('new-service')
+        _service = manager.get_service('port-1234')
         assert _service is not None
         assert isinstance(_service, Service)

@@ -271,9 +271,8 @@ class M2MManager(object):
             self.open_echo_service(port)
         elif action == 'open-portforward':
             service = data['service']
-            device_port = data.get('device_port', None)
             route = data['route']
-            self.open_portforward(service, route, device_port=device_port)
+            self.open_portforward(service, route)
         elif action == 'reboot-device':
             log.debug('reboot requested')
             self.reboot()
@@ -292,9 +291,9 @@ class M2MManager(object):
         log.debug('opening echo service on m2m port %s', port)
         EchoService(self.m2m_client.get_channel(port))
 
-    def open_portforward(self, service, route, device_port=None):
+    def open_portforward(self, service, route):
         """Open a port forward service."""
-        self.client.port_forward.open_service(service, route, device_port)
+        self.client.port_forward.open_service(service, route)
 
     def reboot(self):
         """Initiate a reboot."""
