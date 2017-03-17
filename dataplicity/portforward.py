@@ -308,11 +308,6 @@ class PortForwardManager(object):
 
     def open(self, m2m_port, service=None, port=None):
         """Open a port forward service."""
-        # cache `service` var value, because if the service is not yet
-        # registered, we will loose value of this variable by calling either
-        # `get_service` or `get_service_on_port`
-        service_name = service
-
         if service is None and port is None:
             raise ValueError("one of service or port is required")
         if port is not None:
@@ -320,21 +315,12 @@ class PortForwardManager(object):
         elif service is not None:
             service = self.get_service(service)
         if service is None:
-            # this service is not yet forwarded.
-            # add it to list of handled services
-            if '-' not in service_name:
-                raise ValueError(
-                    "you are trying to forward a port, but you haven't"
-                    " specified it"
-                )
+            return
+        service.connect(m2m_port)
 
-            _, portno = service_name.split('-')
-            if not portno.isdigit():
-                raise ValueError(
-                    "you are trying to forward a port, but it is not a"
-                    " number"
-                )
-            self.add_service(service_name, int(portno))
-            service = self._services[service_name]
-
+    def redirect_service(self, m2m_port, device_port):
+        service = Service(
+            manager=self, name='port-{}'.format(device_port),
+            port=device_port, host='127.0.0.1'
+        )
         service.connect(m2m_port)
