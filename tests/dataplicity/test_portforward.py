@@ -28,3 +28,10 @@ def test_open_service_which_doesnt_exist_results_in_noop(manager, route):
         # and therefore the whole action should be turn into a no-op
 
         assert not connect.called
+
+
+def test_redirect_service(manager, route):
+    with patch('dataplicity.portforward.Service.connect') as connect:
+        manager.redirect_service(9999, 22)
+
+        assert connect.called
