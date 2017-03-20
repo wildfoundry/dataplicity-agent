@@ -1,6 +1,5 @@
 import pytest
 from mock import patch
-from dataplicity.portforward import Service
 from dataplicity.portforward import PortForwardManager
 
 
