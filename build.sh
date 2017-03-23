@@ -11,7 +11,7 @@ mkdir -p bin
 rm bin/dataplicity
 virtualenv -qq .build
 source .build/bin/activate
-pip -q install pex==1.1.14
+pip -q install pex==1.2.3
 echo building ./bin/dataplicity
 pex dataplicity -r requirements.txt -o bin/dataplicity -m dataplicity.app:main
 deactivate
