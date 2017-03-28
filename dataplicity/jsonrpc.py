@@ -20,7 +20,7 @@ class ServerUnreachableError(Exception):
     def __init__(self, url, original):
         self.url = url
         self.original = original
-        _error_format =  "unable to contact JSONRPC server '{url}' ({original})"
+        _error_format = "unable to contact JSONRPC server '{url}' ({original})"
         _error = _error_format.format(url=url, original=original)
         super(ServerUnreachableError, self).__init__(_error)
 

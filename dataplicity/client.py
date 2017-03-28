@@ -227,7 +227,7 @@ class Client(object):
             return None
 
         try:
-            log.debug('notiying server (%s) of m2m identity (%s)',
+            log.debug('notifying server (%s) of m2m identity (%s)',
                       self.remote.url,
                       identity or '<None>')
             with self.remote.batch() as batch:

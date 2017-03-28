@@ -171,7 +171,6 @@ class WSClient(threading.Thread):
         self.channels = {}
         self.last_packet_time = time.time()
 
-        self.dispatcher = Dispatcher()
         self.callback_lock = threading.RLock()
         self.write_lock = threading.Lock()
         self.ready_event = threading.Event()
@@ -188,11 +187,9 @@ class WSClient(threading.Thread):
         self.name = "m2m"  # Thread name
         self.daemon = True
 
-
     def __repr__(self):
         """Return the URL."""
         return 'WSClient({!r})'.format(self.url)
-
 
     @property
     def is_ready(self):
@@ -245,6 +242,7 @@ class WSClient(threading.Thread):
             channel.on_close()
 
     def run(self):
+        """Main websocket handling loop."""
         ws = self.ws
         try:
             for event in persist(self.ws):
@@ -263,10 +261,10 @@ class WSClient(threading.Thread):
             self.on_ready()
         elif event.name == 'disconnected':
             self.on_disconnected()
-        elif event.name == 'ready':
-            self.on_open()
         elif event.name == 'binary':
             self.on_packet(event.data)
+        elif event.name == 'poll':
+            self.sync_identity()
 
     def close(self, timeout=5):
         if not self._closed and self.ready_event.is_set():
@@ -305,7 +303,7 @@ class WSClient(threading.Thread):
         else:
             return True
 
-    def on_open(self):
+    def on_ready(self):
         """Called when WS is opened."""
         log.debug("websocket opened")
         if self.identity is None:
@@ -323,21 +321,9 @@ class WSClient(threading.Thread):
         else:
             self.on_packet(packet)
 
-    def on_error(self, app, error):
-        """Called on WS error."""
-        if error:
-            log.error("websocket error %r", error)
-        self._closed = True
-        self.identity = None
-        self.close_event.set()
-        self.ready_event.set()
-        self.hard_close_channels()
-        self.clear_callbacks()
-        try:
-            # Not entirely sure if this is necessary
-            self.app.close()
-        except:
-            log.exception('error closing ws app in on_error')
+    def sync_identity(self):
+        """Ask manager to set the m2m identity."""
+        self.manager.set_identity(self.identity)
 
     def on_disconnected(self):
         """Called by WS app when socket closes."""
@@ -355,7 +341,7 @@ class WSClient(threading.Thread):
         except:
             log.exception('packet is badly formatted')
         else:
-            self.dispatch(packet_type, packet_body)
+            self.dispatcher.dispatch(packet_type, packet_body)
 
     def channel_write(self, channel, data):
         """Write data to a virtual channel."""
@@ -379,7 +365,8 @@ class WSClient(threading.Thread):
         """Server is telling us about our identity."""
         if not self.is_closed:
             self.identity = identity
-            log.debug('setting identity to %s', self.identity)
+            self.sync_identity()
+
 
     @expose(PacketType.ping)
     def handle_ping(self, packet_type, data):
