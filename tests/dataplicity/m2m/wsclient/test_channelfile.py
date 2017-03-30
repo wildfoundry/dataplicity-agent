@@ -7,14 +7,17 @@ class FakeClient(object):
         act as a client representative.
     """
     def __init__(self):
-        self.buffer = ''
+        self.buffer = b''
 
     def channel_write(self, channel_no, data):
         self.buffer += data
 
 
-def test_channelfile(capsys):
+def test_channelfile(capfd):
     """ test for ChannelFile class
+
+        `capfd` is a fixture from pytest which replaces sys.stdout / stderr as
+        a in-memory buffer, so that we would be able to read output from it.
     """
     channel_no = -100
     client = FakeClient()
@@ -22,12 +25,14 @@ def test_channelfile(capsys):
 
     assert channel.fileno() is None
 
-    data = "test-string 123"
+    data = b"test-string 123"
     channel.write(data)
 
     assert client.buffer == data
 
-    # channelfile outputs to sys.stderr, so let's check for that.
-    out, err = capsys.readouterr()
-    assert out == data
+    # channelfile outputs to sys.stdout, so let's check for that.
+    out, err = capfd.readouterr()
+    # of course, the readout from stdout will be a string, not bytes
+    assert out == data.decode()
+    # and there should be no errors.
     assert err == ''

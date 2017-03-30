@@ -180,7 +180,7 @@ def test_channel_read(channel):
     # leaving just data[-1]) would yield 7 (as a number, not binary string)
     assert channel.read(count=1) == data[-1:]
     # the subsequential reads should yield empty data:
-    assert channel.read(1) == six.b('')
+    assert channel.read(1) == b''
 
 
 def test_channel_write(channel, mocker):
