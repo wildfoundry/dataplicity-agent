@@ -10,7 +10,7 @@ class FakeClient(object):
 @pytest.fixture
 def manager():
     client = FakeClient()
-    return PortForwardManager(client=client)
+    return PortForwardManager.init(client=client)
 
 
 @pytest.fixture
@@ -35,3 +35,22 @@ def test_redirect_service(manager, route):
         manager.redirect_service(9999, 22)
 
         assert connect.called
+
+
+def test_can_open_service_by_name(manager):
+    with patch('dataplicity.portforward.Service.connect') as connect:
+        manager.open(1234, service='web')
+    assert connect.called
+
+
+def test_can_open_service_by_port(manager, mocker):
+    with patch('dataplicity.portforward.Service.connect') as connect:
+        manager.open(1234, port=80)
+    assert connect.called
+
+
+def test_that_using_empty_service_and_port_raises(manager):
+    """ unit test for PortForwardManager::open_service """
+    with pytest.raises(ValueError):
+        route = ('localhost', 22, 'example.com', None)
+        manager.open_service(None, route)
