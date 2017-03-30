@@ -2,23 +2,23 @@ from dataplicity.portforward import PortForwardManager, Service
 import pytest
 
 
-class Client(object):
+class TestClient(object):
     """ fake client class, used to test dereferencing """
     def __init__(self, m2m=None):
         self.m2m = m2m
 
 
 @pytest.fixture()
-def client():
+def test_client():
     """ Client fixture - please note that this will not be compatible with
         weakref
     """
-    return Client('test-m2m')
+    return TestClient('test-m2m')
 
 
 def test_manager_m2m_returns_none_without_client():
     """ using the fixture was causing the weakref to not work """
-    client = Client('test-m2m')
+    client = TestClient('test-m2m')
     manager = PortForwardManager(client=client)
     assert manager.client is not None
     assert manager.m2m == client.m2m
@@ -34,9 +34,9 @@ def test_manager_m2m_returns_none_without_client():
     ("extalt", 8000),
     ("alt", 8080)
 ])
-def test_default_services_are_added_during_init(client, service, port):
+def test_default_services_are_added_during_init(test_client, service, port):
     """ unit test for PortForwardManager::init() """
-    manager = PortForwardManager.init(client)
+    manager = PortForwardManager.init(test_client)
     assert isinstance(manager, PortForwardManager)
     service_object = manager.get_service(service)
     assert isinstance(service_object, Service)
@@ -49,9 +49,9 @@ def test_default_services_are_added_during_init(client, service, port):
     assert manager.get_service('non-existing') is None
 
 
-def test_that_using_empty_service_and_port_raises(client):
+def test_that_using_empty_service_and_port_raises(test_client):
     """ unit test for PortForwardManager::open_service """
-    manager = PortForwardManager.init(client)
+    manager = PortForwardManager.init(test_client)
     with pytest.raises(ValueError):
         route = ('localhost', 22, 'example.com', None)
         manager.open_service(None, route)
