@@ -43,7 +43,7 @@ def test_can_open_service_by_name(manager):
     assert connect.called
 
 
-def test_can_open_service_by_port(manager, mocker):
+def test_can_open_service_by_port(manager):
     with patch('dataplicity.portforward.Service.connect') as connect:
         manager.open(1234, port=80)
     assert connect.called
