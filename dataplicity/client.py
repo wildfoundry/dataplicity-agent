@@ -11,6 +11,7 @@ from ._version import __version__
 from . import constants
 from . import device_meta
 from . import jsonrpc
+from .clockcheck import ClockCheckThread
 from .disk_tools import disk_usage
 from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
@@ -63,6 +64,9 @@ class Client(object):
 
     def run_forever(self):
         """Run the client "forever"."""
+        clock_check_thread = ClockCheckThread()
+        clock_check_thread.start()
+
         try:
             self.poll()
             while not self.exit_event.wait(self.poll_rate_seconds):
@@ -74,9 +78,15 @@ class Client(object):
             log.debug('user exit')
             return
         finally:
+            clock_check_thread.running = False
+            clock_check_thread.join()
             log.debug('closing')
             self.close()
             log.debug('goodbye')
+
+    def exit(self):
+        """Exit the agent."""
+        self.exit_event.set()
 
     def disk_poll(self):
         now = time.time()
@@ -238,8 +248,8 @@ class Client(object):
             return None
         except jsonrpc.ServerUnreachableError as e:
             log.debug('set m2m identity failed, %s', e)
-        except:
-            log.error('unable to set m2m identity')
+        except Exception as error:
+            log.error('unable to set m2m identity: %s', error)
             return None
         else:
             # If we made it here the server has acknowledged it received the identity

@@ -35,12 +35,6 @@ def test_bencode_encoder():
 def test_bencode_decoder():
     """ test decoding capabilities of bencode module
     """
-    # portable (python2+3) way of testing whether object is instance
-    # of bytes ;)
-    with pytest.raises(Exception) as exc:
-        decode(123)
-    assert str(exc.value) == 'decode takes bytes'
-
     assert decode(b'de') == {}
     assert decode(b'i-41e') == -41
     assert decode(b'd3:foo3:bare') == {b'foo': b'bar'}
