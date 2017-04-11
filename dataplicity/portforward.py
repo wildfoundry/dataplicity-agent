@@ -255,6 +255,7 @@ class PortForwardManager(object):
         self._client = weakref.ref(client)
         self._services = {}
         self._ports = {}
+        self._dynamic_ports = {}
         self._close_event = threading.Event()
 
     @property
@@ -317,9 +318,13 @@ class PortForwardManager(object):
             return
         service.connect(m2m_port)
 
-    def redirect_service(self, m2m_port, device_port):
-        service = Service(
-            manager=self, name='port-{}'.format(device_port),
-            port=device_port, host='127.0.0.1'
-        )
+    def redirect_port(self, m2m_port, device_port):
+        if device_port not in self._dynamic_ports:
+            service = Service(
+                manager=self, name='port-{}'.format(device_port),
+                port=device_port, host='127.0.0.1'
+            )
+            self._dynamic_ports[device_port] = service
+        service = self._dynamic_ports[device_port]
         service.connect(m2m_port)
+        return service
