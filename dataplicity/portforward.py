@@ -194,6 +194,7 @@ class Service(object):
         self.name = name
         self.port = port
         self.host = host
+        self.m2m_port = None
         self._connect_index = 0
         self._connections = {}
         self._lock = threading.RLock()
@@ -229,6 +230,7 @@ class Service(object):
 
     def connect(self, port_no):
         """Add a new connection."""
+        self.m2m_port = port_no
         log.debug('new %r connection on port %s', self, port_no)
         with self._lock:
             connection_id = self._connect_index = self._connect_index + 1
@@ -246,6 +248,8 @@ class Service(object):
         """Called by a connection when it is finished."""
         with self._lock:
             self.remove_connection(connection_id)
+            self.manager.remove_service(
+                m2m_port=self.m2m_port, device_port=self.port)
 
 
 class PortForwardManager(object):
@@ -319,12 +323,34 @@ class PortForwardManager(object):
         service.connect(m2m_port)
 
     def redirect_port(self, m2m_port, device_port):
+        # we need to store the reference to the Service somewhere so that
+        # when the Connection starts in thread it wouldn't loose the value
+        # of service variable. However, we have to remember that there may
+        # be numerous connections to the same local port.
+        # for instance, one could be ssh'ed into a machine twice, so we
+        # shan't confuse these two connections.
+        # therefore, an easy way is to store these in a dict, so that the
+        # lookup would be quick
+        #
+        # if there are no redirects on this port, create a hash
         if device_port not in self._dynamic_ports:
-            service = Service(
-                manager=self, name='port-{}'.format(device_port),
-                port=device_port, host='127.0.0.1'
-            )
-            self._dynamic_ports[device_port] = service
-        service = self._dynamic_ports[device_port]
+            self._dynamic_ports[device_port] = {}
+        # create the service which will handle traffic trough Connection
+        service = Service(
+            manager=self, name='port-{}'.format(device_port),
+            port=device_port, host='127.0.0.1'
+        )
+        # store the reference, so that it doesn't deref in Connection thread
+        self._dynamic_ports[device_port][m2m_port] = service
+        # connect to M2M
         service.connect(m2m_port)
+        # the below line is merely a shortcut for nicer-looking unit-tests.
         return service
+
+    def remove_service(self, m2m_port, device_port):
+        # great. The connection was closed, so we need to clean up. However
+        # this function would also be executed after a forward to port 80
+        # (which is noto dynamically redirected) would finish.
+        if device_port in self._dynamic_ports:
+            # ok, we know it is a dynamic one, so remove the object
+            del self._dynamic_ports[device_port][m2m_port]
