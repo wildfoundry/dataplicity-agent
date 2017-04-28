@@ -24,10 +24,10 @@ class Connection(threading.Thread):
     # Max to read at-a-time
     BUFFER_SIZE = 1024 * 32
 
-    def __init__(self, service, connection_id, channel):
+    def __init__(self, close_event, connection_id, channel):
         """Initialize the connection, set up callbacks."""
         super(Connection, self).__init__()
-        self._service = weakref.ref(service)
+        self._close_event = close_event
         self.connection_id = connection_id
         self.channel = channel
 
@@ -40,14 +40,9 @@ class Connection(threading.Thread):
                                    self.on_channel_control)
 
     @property
-    def service(self):
-        """Get the parent service object (weak reference, may return None)."""
-        return self._service()
-
-    @property
     def close_event(self):
         """Get a threading.Event object."""
-        return self.service.close_event
+        return self._close_event
 
     def run(self):
         """Main loop, connects to local server, reads data, and writes it to an m2m channel."""
@@ -235,7 +230,7 @@ class Service(object):
         with self._lock:
             connection_id = self._connect_index = self._connect_index + 1
             channel = self.m2m.m2m_client.get_channel(port_no)
-            connection = Connection(self, connection_id, channel)
+            connection = Connection(self.close_event, connection_id, channel)
             self._connections[connection_id] = connection
         connection.start()
         return connection_id
@@ -248,8 +243,6 @@ class Service(object):
         """Called by a connection when it is finished."""
         with self._lock:
             self.remove_connection(connection_id)
-            self.manager.remove_service(
-                m2m_port=self.m2m_port, device_port=self.port)
 
 
 class PortForwardManager(object):
@@ -332,25 +325,8 @@ class PortForwardManager(object):
         # therefore, an easy way is to store these in a dict, so that the
         # lookup would be quick
         #
-        # if there are no redirects on this port, create a hash
-        if device_port not in self._dynamic_ports:
-            self._dynamic_ports[device_port] = {}
-        # create the service which will handle traffic trough Connection
-        service = Service(
-            manager=self, name='port-{}'.format(device_port),
-            port=device_port, host='127.0.0.1'
-        )
-        # store the reference, so that it doesn't deref in Connection thread
-        self._dynamic_ports[device_port][m2m_port] = service
-        # connect to M2M
-        service.connect(m2m_port)
-        # the below line is merely a shortcut for nicer-looking unit-tests.
-        return service
-
-    def remove_service(self, m2m_port, device_port):
-        # great. The connection was closed, so we need to clean up. However
-        # this function would also be executed after a forward to port 80
-        # (which is noto dynamically redirected) would finish.
-        if device_port in self._dynamic_ports:
-            # ok, we know it is a dynamic one, so remove the object
-            del self._dynamic_ports[device_port][m2m_port]
+        Connection(
+            close_event=self.close_event,
+            connection_id=-1,
+            channel=self.m2m.m2m_client.get_channel(m2m_port)
+        ).start()
