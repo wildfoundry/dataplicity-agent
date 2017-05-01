@@ -24,12 +24,19 @@ class Connection(threading.Thread):
     # Max to read at-a-time
     BUFFER_SIZE = 1024 * 32
 
-    def __init__(self, close_event, connection_id, channel):
+    def __init__(self, close_event, connection_id, channel,
+                 service=None, host_port=None):
         """Initialize the connection, set up callbacks."""
         super(Connection, self).__init__()
         self._close_event = close_event
         self.connection_id = connection_id
         self.channel = channel
+        self._service = None
+        # this is for backward compatibility purposes
+        if service:
+            self._service = weakref.ref(service)
+        # host_port tuple will be used when there will be no service
+        self._host_port = host_port
 
         self._lock = threading.RLock()
         self.socket = None
@@ -38,6 +45,12 @@ class Connection(threading.Thread):
         self.channel.set_callbacks(self.on_channel_data,
                                    self.on_channel_close,
                                    self.on_channel_control)
+
+    @property
+    def service(self):
+        if self._service:
+            return self._service()
+        return None
 
     @property
     def close_event(self):
@@ -84,8 +97,10 @@ class Connection(threading.Thread):
         finally:
             log.debug("left recv loop (read %s bytes)", bytes_written)
             # Tell service we're done with this connection
-            self.service.on_connection_complete(self.connection_id)
-            # These close methods are a null operation if the objects are already closed
+            if self.service:
+                self.service.on_connection_complete(self.connection_id)
+            # These close methods are a null operation if the objects are
+            # already closed
             self.channel.close()
             self._shutdown_read()
 
@@ -97,6 +112,12 @@ class Connection(threading.Thread):
                     self.socket.shutdown(socket.SHUT_RD)
                 except:
                     pass
+
+    @property
+    def host_port(self):
+        if self.service:
+            return self.service.host_port
+        return self._host_port
 
     def _shutdown_write(self):
         """Shutdown writing."""
@@ -133,9 +154,10 @@ class Connection(threading.Thread):
         # Set the timeout for initial connect, as default is too high
         _socket.settimeout(5.0)
 
-        log.debug('connecting to %s', self.service.url)
+        if self.service:
+            log.debug('connecting to %s', self.service.url)
         try:
-            _socket.connect(self.service.host_port)
+            _socket.connect(self.host_port)
         except socket.timeout:
             log.error('timed out connecting to server')
             return False
@@ -146,7 +168,9 @@ class Connection(threading.Thread):
             log.exception('error connecting')
             return False
         else:
-            log.debug("connected to %s", self.service.url)
+            if self.service:
+                log.debug("connected to %s", self.service.url)
+            _socket.setblocking(0)  # set non-blocking
             self.socket = _socket
             self._flush_buffer()
             return True
@@ -230,7 +254,12 @@ class Service(object):
         with self._lock:
             connection_id = self._connect_index = self._connect_index + 1
             channel = self.m2m.m2m_client.get_channel(port_no)
-            connection = Connection(self.close_event, connection_id, channel)
+            connection = Connection(
+                self.close_event,
+                connection_id,
+                channel,
+                service=self
+            )
             self._connections[connection_id] = connection
         connection.start()
         return connection_id
@@ -328,5 +357,6 @@ class PortForwardManager(object):
         Connection(
             close_event=self.close_event,
             connection_id=-1,
-            channel=self.m2m.m2m_client.get_channel(m2m_port)
+            channel=self.m2m.m2m_client.get_channel(m2m_port),
+            host_port=('127.0.0.1', device_port)
         ).start()

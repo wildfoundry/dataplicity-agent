@@ -6,6 +6,9 @@ from dataplicity.portforward import PortForwardManager
 from mock import call, patch
 
 
+_weakref_table = {}
+
+
 class FakeClient(object):
     pass
 
@@ -13,7 +16,9 @@ class FakeClient(object):
 @pytest.fixture
 def manager():
     client = FakeClient()
-    return PortForwardManager.init(client=client)
+    _weakref_table['client'] = client
+    yield PortForwardManager.init(client=client)
+    del _weakref_table['client']
 
 
 @pytest.fixture
@@ -34,10 +39,11 @@ def test_open_service_which_doesnt_exist_results_in_noop(manager, route):
 
 
 def test_redirect_service(manager, route):
-    with patch('dataplicity.portforward.Service.connect') as connect:
+    manager.client.m2m = M2MManager.init('ws://localhost/')
+    with patch('dataplicity.portforward.Connection.start') as connection_start:
         manager.redirect_port(9999, 22)
 
-        assert connect.called
+        assert connection_start.called
 
 
 def test_calling_redirect_service_from_m2mmanager_works():
@@ -55,17 +61,6 @@ def test_calling_redirect_service_from_m2mmanager_works():
             }
         )
         assert redirect_port.call_args == call(device_port=22, m2m_port=1234)
-
-
-def test_service_is_not_garbage_collected_after_leaving_redirect_port_fn(
-    manager
-):
-    with patch('dataplicity.portforward.Service.connect') as connect:
-        service = manager.redirect_port(1234, 22)
-        assert connect.called
-        _ref = weakref.ref(service)
-        del service
-        assert _ref() is not None
 
 
 def test_can_open_service_by_name(manager):
