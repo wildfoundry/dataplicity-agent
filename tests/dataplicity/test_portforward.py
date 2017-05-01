@@ -1,10 +1,7 @@
-import weakref
-
 import pytest
 from dataplicity.m2mmanager import M2MManager
 from dataplicity.portforward import PortForwardManager
 from mock import call, patch
-
 
 _weakref_table = {}
 
