@@ -285,7 +285,7 @@ class PortForwardManager(object):
 
     def get_service_on_port(self, port):
         """Get the service on a numbered port."""
-        service_name = self._ports.get('port')
+        service_name = self._ports.get(port)
         if service_name is None:
             return None
         return self._services[service_name]
@@ -314,4 +314,13 @@ class PortForwardManager(object):
             service = self.get_service_on_port(port or 80)
         elif service is not None:
             service = self.get_service(service)
+        if service is None:
+            return
+        service.connect(m2m_port)
+
+    def redirect_service(self, m2m_port, device_port):
+        service = Service(
+            manager=self, name='port-{}'.format(device_port),
+            port=device_port, host='127.0.0.1'
+        )
         service.connect(m2m_port)
