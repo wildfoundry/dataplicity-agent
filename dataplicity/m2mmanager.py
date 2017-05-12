@@ -80,7 +80,7 @@ class M2MManager(object):
         self.identity = identity
         self.terminals = {}
         self.notified_identity = None
-        self.m2m_client = WSClient()
+        self.m2m_client = WSClient(self, url)
 
     @classmethod
     def init(cls, client, m2m_url=None):

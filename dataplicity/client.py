@@ -222,8 +222,6 @@ class Client(object):
 
         """
         if self.auth_token is None:
-            if not self.disable_sync:
-                log.debug("skipping m2m identity notify because we don't have an auth token")
             return None
 
         try:

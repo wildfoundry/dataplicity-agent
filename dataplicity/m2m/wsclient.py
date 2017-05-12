@@ -9,7 +9,7 @@ from collections import defaultdict, deque
 
 from lomond import WebSocket
 from lomond.persist import persist
-from lomond.errors import Error as WebSocketError
+from lomond.errors import WebSocketError
 
 from . import bencode
 from . import packets
@@ -158,9 +158,11 @@ class Channel(object):
 class WSClient(threading.Thread):
     """Interface to the M2M server."""
 
-    def __init__(self, url, uuid=None,
-                 channel_callback=None, control_callback=None, **kwargs):
+    def __init__(self, manager, url, uuid=None,
+                 channel_callback=None, control_callback=None,
+                 **kwargs):
         super(WSClient, self).__init__()
+        self.manager = manager
         self.url = url
         self.ws = WebSocket(url)
         self.channel_callback = channel_callback
@@ -194,6 +196,10 @@ class WSClient(threading.Thread):
     @property
     def is_ready(self):
         return self.ready_event.is_set()
+
+    @property
+    def is_closed(self):
+        return self._closed
 
     @property
     def open_channels(self):
@@ -246,11 +252,11 @@ class WSClient(threading.Thread):
         ws = self.ws
         try:
             for event in persist(self.ws):
-                log.debug('ws %r', event)
+                log.debug('WS %r', event)
                 try:
                     self.on_event(event)
                 except Exception as error:
-                    log.debug('error handling websocket event')
+                    log.exception('error handling websocket event')
         except (SystemExit, KeyboardInterrupt):
             log.info('exit requested')
             self.on_close()
@@ -262,7 +268,7 @@ class WSClient(threading.Thread):
         elif event.name == 'disconnected':
             self.on_disconnected()
         elif event.name == 'binary':
-            self.on_packet(event.data)
+            self.on_binary(event.data)
         elif event.name == 'poll':
             self.sync_identity()
 
@@ -366,7 +372,6 @@ class WSClient(threading.Thread):
         if not self.is_closed:
             self.identity = identity
             self.sync_identity()
-
 
     @expose(PacketType.ping)
     def handle_ping(self, packet_type, data):
