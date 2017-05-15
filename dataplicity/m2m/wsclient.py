@@ -342,6 +342,7 @@ class WSClient(threading.Thread):
     def on_instruction(self, sender, data):
         """Called with an instruction."""
         log.debug('instruction from {%s} %r', sender, data)
+        self.manager.on_instruction(sender, data)
 
     # --------------------------------------------------------
     # Packet handlers
