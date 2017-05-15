@@ -164,7 +164,7 @@ class WSClient(threading.Thread):
         super(WSClient, self).__init__()
         self.manager = manager
         self.url = url
-        self.ws = WebSocket(url)
+        self.websocket = WebSocket(url)
         self.channel_callback = channel_callback
         self.control_callback = control_callback
 
@@ -175,8 +175,6 @@ class WSClient(threading.Thread):
 
         self.callback_lock = threading.RLock()
         self.write_lock = threading.Lock()
-        self.ready_event = threading.Event()
-        self.close_event = threading.Event()
         self.callbacks = defaultdict(list)
         self.hooks = defaultdict(list)
 
@@ -192,10 +190,6 @@ class WSClient(threading.Thread):
     def __repr__(self):
         """Return the URL."""
         return 'WSClient({!r})'.format(self.url)
-
-    @property
-    def is_ready(self):
-        return self.ready_event.is_set()
 
     @property
     def is_closed(self):
@@ -249,16 +243,21 @@ class WSClient(threading.Thread):
 
     def run(self):
         """Main websocket handling loop."""
-        ws = self.ws
         try:
-            for event in persist(self.ws):
-                log.debug('WS %r', event)
-                try:
-                    self.on_event(event)
-                except Exception as error:
-                    log.exception('error handling websocket event')
+            with self.websocket:
+                for event in persist(self.websocket):
+                    log.debug('WS %r', event)
+                    try:
+                        self.on_event(event)
+                    except Exception as error:
+                        log.exception('error handling websocket event')
         except (SystemExit, KeyboardInterrupt):
             log.info('exit requested')
+            self.on_close()
+        except Exception:
+            log.exception('unhandled error from websocket')
+            self.on_close()
+        else:
             self.on_close()
 
     def on_event(self, event):
@@ -273,20 +272,9 @@ class WSClient(threading.Thread):
             self.sync_identity()
 
     def close(self, timeout=5):
-        if not self._closed and self.ready_event.is_set():
-            self.send(PacketType.request_leave)
-            if timeout:
-                self.join(timeout)
+        self.websocket.close()
         self._closed = True
         self.identity = None
-        self.ready_event.set()
-
-    def wait_ready(self, timeout=10):
-        """Wait until the server is ready, and return identity."""
-        # Q. What are we waiting for?
-        # A. Establishing a m2m connection, and for the server to send us an identity.
-        self.ready_event.wait(timeout)
-        return self.identity
 
     def send(self, packet, *args, **kwargs):
         """Send a packet. Will encode if necessary."""
@@ -303,7 +291,7 @@ class WSClient(threading.Thread):
     def send_bytes(self, packet_bytes):
         """Send bytes over the websocket."""
         try:
-            self.ws.send_binary(packet_bytes)
+            self.websocket.send_binary(packet_bytes)
         except WebSocketError:
             return False
         else:
@@ -335,8 +323,6 @@ class WSClient(threading.Thread):
         """Called by WS app when socket closes."""
         self._closed = True
         self.identity = None
-        self.close_event.set()
-        self.ready_event.set()
         self.clear_callbacks()
 
     def on_packet(self, packet):
@@ -381,7 +367,7 @@ class WSClient(threading.Thread):
     @expose(PacketType.welcome)
     def handle_welcome(self, packet_type):
         """Welcome packet means we can start talking to the m2m server."""
-        self.ready_event.set()
+        pass
 
     @expose(PacketType.log)
     def handle_log(self, packet_type, msg):
