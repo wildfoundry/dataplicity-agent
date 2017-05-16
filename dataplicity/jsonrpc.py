@@ -7,7 +7,7 @@ import logging
 from .compat import urlopen, text_type
 
 
-log = logging.getLogger('dataplicity')
+log = logging.getLogger('agent')
 
 
 class ProtocolError(Exception):
@@ -204,6 +204,7 @@ class JSONRPC(object):
             "id": call_id
         }
         response_json = self._send(call)
+        log.debug(response_json)
         try:
             response = json.loads(response_json)
         except:

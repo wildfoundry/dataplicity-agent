@@ -239,13 +239,16 @@ class Client(object):
                                    identity=identity or '')
             # These methods may potentially throw JSONRPCErrors
             batch.get_result('authenticate_result')
-            batch.get_result('associate_result')
+            associate_result = batch.get_result('associate_result')
+            if associate_result['status'] != 'success':
+                return None
         except jsonrpc.JSONRPCError as e:
             log.error('unable to associate m2m identity ("%s"=%s, "%s")',
                       e.method, e.code, e.message)
             return None
         except jsonrpc.ServerUnreachableError as e:
             log.debug('set m2m identity failed, %s', e)
+            return None
         except Exception as error:
             log.error('unable to set m2m identity: %s', error)
             return None
