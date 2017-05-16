@@ -51,6 +51,7 @@ class Interceptor(object):
             size = [80, 24]
         self.size = size
         self.master_fd = None
+        self.pid = None
 
     def spawn(self, argv=None):
         '''
