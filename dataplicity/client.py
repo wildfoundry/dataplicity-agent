@@ -254,6 +254,5 @@ class Client(object):
             return None
         else:
             # If we made it here the server has acknowledged it received the identity
-            # It will be sent again on sync anyway, as a precaution
             log.debug('server received m2m identity %s', identity)
             return identity

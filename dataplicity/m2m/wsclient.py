@@ -320,8 +320,7 @@ class WSClient(threading.Thread):
         self.manager.set_identity(self.identity)
 
     def on_disconnected(self):
-        """Called by WS app when socket closes."""
-        self._closed = True
+        """Called when ws socket closes."""
         self.identity = None
         self.clear_callbacks()
 
