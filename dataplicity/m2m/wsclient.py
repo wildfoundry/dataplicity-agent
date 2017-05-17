@@ -353,6 +353,7 @@ class WSClient(threading.Thread):
     def handle_set_identity(self, packet_type, identity):
         """Server is telling us about our identity."""
         if not self.is_closed:
+            log.debug('setting identity to %s', self.identity)
             self.identity = identity
             self.sync_identity()
 
