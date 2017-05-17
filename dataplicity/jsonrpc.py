@@ -192,6 +192,7 @@ class JSONRPC(object):
                     url_file.close()
         except Exception as e:
             raise ServerUnreachableError(self.url, e)
+        log.debug(response_json[:1000])
         return response_json
 
     def call(self, method, **params):
@@ -204,7 +205,6 @@ class JSONRPC(object):
             "id": call_id
         }
         response_json = self._send(call)
-        log.debug(response_json[:1000])
         try:
             response = json.loads(response_json)
         except:
