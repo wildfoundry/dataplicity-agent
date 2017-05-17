@@ -204,7 +204,7 @@ class JSONRPC(object):
             "id": call_id
         }
         response_json = self._send(call)
-        log.debug(response_json)
+        log.debug(response_json[:1000])
         try:
             response = json.loads(response_json)
         except:

@@ -253,12 +253,9 @@ class WSClient(threading.Thread):
                         log.exception('error handling websocket event')
         except (SystemExit, KeyboardInterrupt):
             log.info('exit requested')
-            self.on_close()
         except Exception:
             log.exception('unhandled error from websocket')
-            self.on_close()
-        else:
-            self.on_close()
+        self.on_close()
 
     def on_event(self, event):
         """Called when new websocket events arrive."""
