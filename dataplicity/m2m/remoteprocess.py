@@ -71,13 +71,14 @@ class RemoteProcess(proxy.Interceptor):
         super(RemoteProcess, self).write_master(data)
 
     def close(self):
-        if not self._closed:
+        if not self._closed and self.pid is not None:
             log.debug('sending kill signal to %r', self)
             # TODO: Implement a non-blocking kill
             os.kill(self.pid, signal.SIGKILL)
+            log.debug('waiting for %r', self)
             os.waitpid(self.pid, 0)
             log.debug('killed %r', self)
-            self._closed = True
+        self._closed = True
 
     def __enter__(self):
         return self

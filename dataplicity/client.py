@@ -222,12 +222,10 @@ class Client(object):
 
         """
         if self.auth_token is None:
-            if not self.disable_sync:
-                log.debug("skipping m2m identity notify because we don't have an auth token")
             return None
 
         try:
-            log.debug('notiying server (%s) of m2m identity (%s)',
+            log.debug('notifying server (%s) of m2m identity (%s)',
                       self.remote.url,
                       identity or '<None>')
             with self.remote.batch() as batch:
@@ -248,11 +246,11 @@ class Client(object):
             return None
         except jsonrpc.ServerUnreachableError as e:
             log.debug('set m2m identity failed, %s', e)
+            return None
         except Exception as error:
             log.error('unable to set m2m identity: %s', error)
             return None
         else:
             # If we made it here the server has acknowledged it received the identity
-            # It will be sent again on sync anyway, as a precaution
             log.debug('server received m2m identity %s', identity)
             return identity

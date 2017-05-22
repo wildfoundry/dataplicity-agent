@@ -7,7 +7,7 @@ import logging
 from .compat import urlopen, text_type
 
 
-log = logging.getLogger('dataplicity')
+log = logging.getLogger('agent')
 
 
 class ProtocolError(Exception):
@@ -20,7 +20,7 @@ class ServerUnreachableError(Exception):
     def __init__(self, url, original):
         self.url = url
         self.original = original
-        _error_format =  "unable to contact JSONRPC server '{url}' ({original})"
+        _error_format = "unable to contact JSONRPC server '{url}' ({original})"
         _error = _error_format.format(url=url, original=original)
         super(ServerUnreachableError, self).__init__(_error)
 
@@ -192,6 +192,7 @@ class JSONRPC(object):
                     url_file.close()
         except Exception as e:
             raise ServerUnreachableError(self.url, e)
+        log.debug(response_json[:1000])
         return response_json
 
     def call(self, method, **params):
