@@ -8,6 +8,7 @@ import time
 from collections import defaultdict, deque
 
 from lomond import WebSocket
+from lomond.constants import USER_AGENT as LOMOND_USER_AGENT
 from lomond.persist import persist
 from lomond.errors import WebSocketError
 
@@ -17,6 +18,7 @@ from ..compat import text_type
 from .dispatcher import Dispatcher, expose
 from .packets import M2MPacket as Packet
 from .packets import PacketType
+from ._version import __version__
 
 
 log = logging.getLogger('m2m')
@@ -164,7 +166,11 @@ class WSClient(threading.Thread):
         super(WSClient, self).__init__()
         self.manager = manager
         self.url = url
-        self.websocket = WebSocket(url)
+        _user_agent = "Agent/{} {}".format(
+            __version__,
+            LOMOND_USER_AGENT
+        )
+        self.websocket = WebSocket(url, agent=_user_agent)
         self.channel_callback = channel_callback
         self.control_callback = control_callback
 
