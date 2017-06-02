@@ -18,7 +18,7 @@ from ..compat import text_type
 from .dispatcher import Dispatcher, expose
 from .packets import M2MPacket as Packet
 from .packets import PacketType
-from ._version import __version__
+from .._version import __version__
 
 
 log = logging.getLogger('m2m')
