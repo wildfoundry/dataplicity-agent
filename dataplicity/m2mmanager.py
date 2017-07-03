@@ -9,6 +9,7 @@ import threading
 
 from . import constants
 from .m2m import WSClient, EchoService
+from .m2m.fileservice import FileService
 from .m2m.remoteprocess import RemoteProcess
 
 
@@ -155,6 +156,10 @@ class M2MManager(object):
         elif action == 'reboot-device':
             log.debug('reboot requested')
             self.reboot()
+        elif action == 'get-file':
+            port = data['port']
+            path = data['path']
+            self.open_file_service(path, port)
         # Unrecognized instructions are ignored
 
     def open_terminal(self, name, port, size=None):
@@ -182,3 +187,8 @@ class M2MManager(object):
         # Why not subprocess.call? Because it will block this process and prevent graceful exit!
         pid = subprocess.Popen(command.split()).pid
         log.debug('opened reboot process %s', pid)
+
+    def open_file_service(self, path, port):
+        """Open a file service, to send a file over a port."""
+        channel = self.m2m_client.get_channel(port)
+        FileService(channel, path)
