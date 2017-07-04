@@ -10,6 +10,7 @@ import threading
 from . import constants
 from .m2m import WSClient, EchoService
 from .m2m.fileservice import FileService
+from .m2m.commandservice import CommandService
 from .m2m.remoteprocess import RemoteProcess
 
 
@@ -154,12 +155,17 @@ class M2MManager(object):
             m2m_port = data['m2m_port']
             self.client.port_forward.redirect_port(device_port, m2m_port)
         elif action == 'reboot-device':
-            log.debug('reboot requested')
             self.reboot()
         elif action == 'get-file':
-            port = data['port']
-            path = data['path']
-            self.open_file_service(path, port)
+            self.open_file_service(
+                data['port'],
+                data['path']
+            )
+        elif action == 'run-command':
+            self.open_command_service(
+                data['port'],
+                data['command']
+            )
         # Unrecognized instructions are ignored
 
     def open_terminal(self, name, port, size=None):
@@ -188,7 +194,12 @@ class M2MManager(object):
         pid = subprocess.Popen(command.split()).pid
         log.debug('opened reboot process %s', pid)
 
-    def open_file_service(self, path, port):
+    def open_file_service(self, port, path):
         """Open a file service, to send a file over a port."""
         channel = self.m2m_client.get_channel(port)
         FileService(channel, path)
+
+    def open_command_service(self, port, command):
+        """Open a service that runs a command and sends the stdout over m2m."""
+        channel = self.m2m_client.get_channel(port)
+        CommandService(channel, command)
