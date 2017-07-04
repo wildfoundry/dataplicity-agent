@@ -38,7 +38,7 @@ class FileService(threading.Thread):
         return self._repr
 
     def run(self, channel, path):
-        # Run thread and log exceptions
+        """Run the thread and log exceptions."""
         try:
             self._run(channel, path)
         except Exception:
@@ -46,6 +46,7 @@ class FileService(threading.Thread):
 
     def _run(self, channel, path):
         """Send a file over a port."""
+        log.debug("%r started", self)
         bytes_sent = 0
         try:
             with open(path, 'rb') as read_file:

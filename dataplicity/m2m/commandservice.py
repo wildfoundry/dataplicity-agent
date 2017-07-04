@@ -32,13 +32,14 @@ class CommandService(threading.Thread):
         return self._repr
 
     def run(self, channel, command):
-        # Run thread and log exceptions
+        """Run the thread and log exceptions."""
         try:
             self._run(channel, command)
         except Exception:
             log.exception("error running %r", self)
 
     def _run(self, channel, command):
+        """Run command and send stdout over m2m."""
         log.debug("%r started", self)
         try:
             process = subprocess.Popen(command, stdout=subprocess.PIPE)
