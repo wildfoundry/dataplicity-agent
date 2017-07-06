@@ -156,7 +156,7 @@ class M2MManager(object):
             self.client.port_forward.redirect_port(device_port, m2m_port)
         elif action == 'reboot-device':
             self.reboot()
-        elif action == 'get-file':
+        elif action == 'read-file':
             self.open_file_service(
                 data['port'],
                 data['path']
