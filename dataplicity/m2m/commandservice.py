@@ -25,20 +25,23 @@ class CommandService(threading.Thread):
 
     def __init__(self, channel, command):
         self._repr = "CommandService({!r}, {!r})".format(channel, command)
-        super(CommandService, self).__init__(args=(channel, command))
+        super(CommandService, self).__init__(
+            args=(channel, command),
+            target=self.run_service
+        )
         self.start()
 
     def __repr__(self):
         return self._repr
 
-    def run(self, channel, command):
+    def run_service(self, channel, command):
         """Run the thread and log exceptions."""
         try:
-            self._run(channel, command)
+            self._run_service(channel, command)
         except Exception:
             log.exception("error running %r", self)
 
-    def _run(self, channel, command):
+    def _run_service(self, channel, command):
         """Run command and send stdout over m2m."""
         log.debug("%r started", self)
         try:

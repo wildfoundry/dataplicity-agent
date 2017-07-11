@@ -31,20 +31,23 @@ class FileService(threading.Thread):
 
     def __init__(self, channel, path):
         self._repr = "FileService({!r}, {!r})".format(channel, path)
-        super(FileService, self).__init__(args=(channel, path))
+        super(FileService, self).__init__(
+            args=(channel, path),
+            target=self.run_service
+        )
         self.start()
 
     def __repr__(self):
         return self._repr
 
-    def run(self, channel, path):
+    def run_service(self, channel, path):
         """Run the thread and log exceptions."""
         try:
-            self._run(channel, path)
+            self._run_service(channel, path)
         except Exception:
             log.exception("error running %r", self)
 
-    def _run(self, channel, path):
+    def _run_service(self, channel, path):
         """Send a file over a port."""
         log.debug("%r started", self)
         bytes_sent = 0
