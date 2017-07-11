@@ -10,8 +10,9 @@ and the channel is closed.
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from functools import partial
 import logging
-import os
+import select
 import subprocess
 import threading
 import time
@@ -24,6 +25,9 @@ log = logging.getLogger('m2m')
 
 class CommandService(threading.Thread):
     """Runs a command and sends the stdout over m2m."""
+
+    TIMEOUT = 5
+    CHUNK_SIZE = 1024
 
     def __init__(self, channel, command):
         self._repr = "CommandService({!r}, {!r})".format(channel, command)
@@ -56,13 +60,31 @@ class CommandService(threading.Thread):
             log.debug('%r command failed; %s', self, error)
             return
 
-        threading.Timer(5, process.kill).start()
+        bytes_sent = 0
+        end_time = time.time() + self.TIMEOUT
+        fh = process.stdout.fileno()
+        try:
+            while time.time() < end:
+                readable, _, _, select.select(
+                    [fh], [], [],
+                    min(0.1, end_time - time.time())
+                )
+                if readable:
+                    chunk = os.read(fh, self.CHUNK_SIZE)
+                    if not chunk:
+                        break
+                    channel.write(chunk)
+                    bytes_sent += len(chunk)
 
-        output = process.communicate()[0]
-        channel.write(output)
-        channel.close()
-        log.debug(
-            'read %s byte(s) from command "%s"',
-            len(output),
-            command
-        )
+        except WebSocketError as websocket_error:
+            log.warning('%r websocket error (%s)', self, websocket_error)
+        except Exception as error:
+            log.exception('%r error', self)
+        else:
+            log.debug(
+                'read %s byte(s) from command "%s"',
+                bytes_sent,
+                command
+            )
+        finally:
+            channel.close()
