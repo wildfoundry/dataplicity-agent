@@ -64,10 +64,10 @@ class CommandService(threading.Thread):
         end_time = time.time() + self.TIMEOUT
         fh = process.stdout.fileno()
         try:
-            while time.time() < end:
+            while time.time() < end_time:
                 readable, _, _, select.select(
                     [fh], [], [],
-                    min(0.1, end_time - time.time())
+                    max(0.1, end_time - time.time())
                 )
                 if readable:
                     chunk = os.read(fh, self.CHUNK_SIZE)
