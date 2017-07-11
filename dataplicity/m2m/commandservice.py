@@ -58,23 +58,11 @@ class CommandService(threading.Thread):
 
         threading.Timer(5, process.kill).start()
 
-        bytes_sent = 0
-        try:
-            for chunk in iter(process.stdout.readline, b''):
-                log.debug(" $ %r", chunk)
-                channel.write(chunk)
-                bytes_sent += len(chunk)
-        except IOError:
-            log.debug('%r unable to read command output', self)
-        except WebSocketError as websocket_error:
-            log.warning('%r websocket error (%s)', self, websocket_error)
-        except Exception as error:
-            log.exception('%r error', self)
-        else:
-            log.debug(
-                'read %s byte(s) from command "%s"',
-                bytes_sent,
-                command
-            )
-        finally:
-            channel.close()
+        output = process.communicate()[0]
+        channel.write(output)
+        channel.close()
+        log.debug(
+            'read %s byte(s) from command "%s"',
+            len(output),
+            command
+        )
