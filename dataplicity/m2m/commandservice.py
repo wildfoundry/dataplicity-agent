@@ -11,17 +11,14 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import logging
-import signal
 import subprocess
 import threading
+import time
 
 from lomond.errors import WebSocketError
 
 
 log = logging.getLogger('m2m')
-
-class TimeoutError(Exception):
-    pass
 
 
 class CommandService(threading.Thread):
@@ -40,16 +37,10 @@ class CommandService(threading.Thread):
 
     def run_service(self, channel, command):
         """Run the thread and log exceptions."""
-        def on_timeout(signum, frame):
-            raise TimeoutError()
-
-        signal.alarm(5, on_timeout)
         try:
             self._run_service(channel, command)
         except Exception:
             log.exception("error running %r", self)
-        finally:
-            signal.alarm(0)
 
     def _run_service(self, channel, command):
         """Run command and send stdout over m2m."""
@@ -64,6 +55,16 @@ class CommandService(threading.Thread):
             log.debug('%r command failed; %s', self, error)
             return
 
+        def timeout(fh):
+            """Close file after 5 seconds."""
+            time.sleep(5)
+            fh.close()
+
+        threading.Thread(
+            target=timeout,
+            args=(process.stdout,)
+        ).start()
+
         bytes_sent = 0
         try:
             for chunk in iter(process.stdout.readline, b''):
@@ -74,8 +75,6 @@ class CommandService(threading.Thread):
             log.debug('%r unable to read command output', self)
         except WebSocketError as websocket_error:
             log.warning('%r websocket error (%s)', self, websocket_error)
-        except TimeoutError as error:
-            log.warning("command timed out")
         except Exception as error:
             log.exception('%r error', self)
         else:
