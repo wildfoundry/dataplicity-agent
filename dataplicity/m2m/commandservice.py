@@ -56,7 +56,7 @@ class CommandService(threading.Thread):
             log.debug('%r command failed; %s', self, error)
             return
 
-        threading.Timer(5, process.terminate).start()
+        threading.Timer(5, process.kill).start()
 
         bytes_sent = 0
         try:
