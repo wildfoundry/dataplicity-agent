@@ -25,7 +25,7 @@ log = logging.getLogger('m2m')
 class CommandService(threading.Thread):
     """Runs a command and sends the stdout over m2m."""
 
-    CHUNK_SIZE = 1024
+    CHUNK_SIZE = 4096
 
     def __init__(self, channel, command):
         self._repr = "CommandService({!r}, {!r})".format(channel, command)
