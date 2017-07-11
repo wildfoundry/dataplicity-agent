@@ -65,7 +65,7 @@ class CommandService(threading.Thread):
         fh = process.stdout.fileno()
         try:
             while time.time() < end_time:
-                readable, _, _, select.select(
+                readable, _, _ = select.select(
                     [fh], [], [],
                     max(0.1, end_time - time.time())
                 )
