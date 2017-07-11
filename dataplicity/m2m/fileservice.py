@@ -60,14 +60,14 @@ class FileService(threading.Thread):
                     channel.write(chunk)
                     bytes_sent += len(chunk)
         except IOError:
-            log.debug('unable to read file "%s"', self.path)
+            log.debug('unable to read file "%s"', path)
         except WebSocketError as websocket_error:
             log.warning('websocket error (%s)', websocket_error)
         except Exception as error:
             log.exception('error in file service')
         else:
             log.debug(
-                'read %s byte(s) from ""',
+                'read %s byte(s) from "%s"',
                 bytes_sent,
                 path
             )

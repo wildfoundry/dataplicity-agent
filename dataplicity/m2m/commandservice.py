@@ -45,9 +45,13 @@ class CommandService(threading.Thread):
         """Run command and send stdout over m2m."""
         log.debug("%r started", self)
         try:
-            process = subprocess.Popen(command, stdout=subprocess.PIPE)
-        except OSError:
-            log.debug('%r command failed', self)
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                shell=True
+            )
+        except OSError as error:
+            log.debug('%r command failed; %s', self, error)
             return
 
         stdout, _ = process.communicate()
