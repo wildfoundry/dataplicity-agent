@@ -87,5 +87,5 @@ class CommandService(threading.Thread):
                 command
             )
         finally:
-            process.terminate()
             channel.close()
+            process.terminate()
