@@ -11,6 +11,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import logging
+import os
 import subprocess
 import threading
 import time
@@ -55,15 +56,7 @@ class CommandService(threading.Thread):
             log.debug('%r command failed; %s', self, error)
             return
 
-        def timeout(fh):
-            """Close file after 5 seconds."""
-            time.sleep(5)
-            fh.close()
-
-        threading.Thread(
-            target=timeout,
-            args=(process.stdout,)
-        ).start()
+        threading.Timer(5, process.terminate).start()
 
         bytes_sent = 0
         try:
