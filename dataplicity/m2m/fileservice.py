@@ -9,6 +9,7 @@ File data is sent in chunks.
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from functools import partial
 import logging
 import threading
 
@@ -53,9 +54,10 @@ class FileService(threading.Thread):
         bytes_sent = 0
         try:
             with open(path, 'rb') as read_file:
-                while True:
-                    chunk = read_file.read(self.CHUNK_SIZE)
-                    if not chunk:
+                read = partial(read_file.read, self.CHUNK_SIZE)
+                for chunk in iter(read, b''):
+                    if channel.is_closed:
+                        log.warning('%r m2m closed prematurely', self)
                         break
                     channel.write(chunk)
                     bytes_sent += len(chunk)
@@ -66,7 +68,7 @@ class FileService(threading.Thread):
         except Exception as error:
             log.exception('error in file service')
         else:
-            log.debug(
+            log.info(
                 'read %s byte(s) from "%s"',
                 bytes_sent,
                 path
