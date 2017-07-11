@@ -54,14 +54,10 @@ class CommandService(threading.Thread):
             log.debug('%r command failed; %s', self, error)
             return
 
-        stdout, _ = process.communicate()
         bytes_sent = 0
         try:
-            while True:
-                chunk = stdout.readline()
-                log.debug(" $ %s", chunk)
-                if not chunk:
-                    break
+            for chunk in iter(process.stdout.readline, b''):
+                log.debug(" $ %r", chunk)
                 channel.write(chunk)
                 bytes_sent += len(chunk)
         except IOError:
