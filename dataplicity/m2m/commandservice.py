@@ -57,7 +57,7 @@ class CommandService(threading.Thread):
         stdout, _ = process.communicate()
         bytes_sent = 0
         try:
-            while process.poll() is None:
+            while True:
                 chunk = stdout.readline()
                 log.debug(" $ %s", chunk)
                 if not chunk:
