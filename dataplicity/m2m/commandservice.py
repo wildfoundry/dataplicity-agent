@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 
 from functools import partial
 import logging
+import os
 import select
 import subprocess
 import threading
