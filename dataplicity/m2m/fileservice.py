@@ -65,7 +65,7 @@ class FileService(threading.Thread):
             log.debug('unable to read file "%s"', path)
         except WebSocketError as websocket_error:
             log.warning('websocket error (%s)', websocket_error)
-        except Exception as error:
+        except Exception:
             log.exception('error in file service')
         else:
             log.info(
