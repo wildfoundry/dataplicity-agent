@@ -2,7 +2,7 @@
 
 An M2M Service to run commands.
 
-The stdout it sent a line at a time, until the command is finished,
+The stdout is sent a line at a time, until the command is finished,
 and the channel is closed.
 
 """
