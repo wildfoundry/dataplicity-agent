@@ -1,6 +1,7 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import json
 import logging
 import sys
 import threading
@@ -152,6 +153,11 @@ class Channel(object):
         assert isinstance(data, bytes), "data must be bytes"
         with self._lock:
             self.client.channel_write(self.number, data)
+
+    def send_control(self, data):
+        """Write a control packet."""
+        with self._lock:
+            self.client.channel_control_write(data)
 
     def get_file(self):
         return ChannelFile(self.client, self.number)
@@ -345,6 +351,11 @@ class WSClient(threading.Thread):
         """Called with an instruction."""
         log.debug('instruction from {%s} %r', sender, data)
         self.manager.on_instruction(sender, data)
+
+    def channel_control_write(self, channel, data):
+        """Send a channel control packet."""
+        control_json = json.dumps(data)
+        self.channel_write(channel, control_json)
 
     # --------------------------------------------------------
     # Packet handlers
