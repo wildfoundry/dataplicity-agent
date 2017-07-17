@@ -74,7 +74,7 @@ class FileService(threading.Thread):
                         break
                     channel.write(chunk)
                     bytes_sent += len(chunk)
-        except IOError as error:
+        except IOError:
             self.send_error(channel, "ioerror", msg="unable to open file")
             log.debug('unable to read file "%s"', path)
         except WebSocketError as websocket_error:
