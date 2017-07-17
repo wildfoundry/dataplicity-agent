@@ -114,7 +114,7 @@ class CommandService(threading.Thread):
             })
             channel.close()
             try:
-                if process.poll() is not None:
+                if process.poll() is None:
                     process.kill()
             except OSError:
                 log.exception('%r failed to kill', self)
