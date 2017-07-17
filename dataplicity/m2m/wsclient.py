@@ -154,10 +154,10 @@ class Channel(object):
         with self._lock:
             self.client.channel_write(self.number, data)
 
-    def send_control(self, data):
+    def send_control(self, control_struct):
         """Write a control packet."""
         with self._lock:
-            self.client.channel_control_write(self.number, data)
+            self.client.channel_control_write(self.number, control_struct)
 
     def get_file(self):
         return ChannelFile(self.client, self.number)
@@ -352,9 +352,9 @@ class WSClient(threading.Thread):
         log.debug('instruction from {%s} %r', sender, data)
         self.manager.on_instruction(sender, data)
 
-    def channel_control_write(self, channel, data):
+    def channel_control_write(self, channel, control_dict):
         """Send a channel control packet."""
-        control_json = json.dumps(data)
+        control_json = json.dumps(control_dict)
         self.send(
             PacketType.request_send_control,
             channel=channel,
