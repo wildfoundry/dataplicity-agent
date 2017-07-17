@@ -38,13 +38,13 @@ class CommandService(threading.Thread):
     def __repr__(self):
         return self._repr
 
-    def send_error(self, channel, status, **extra):
+    def send_error(self, channel, status, msg, **extra):
         """Send a control packet with an error"""
         error = {
             "service":"run-command",
             "type": "error",
             "status": status,
-            "msg": ""
+            "msg": msg
         }
         error.update(extra)
         channel.send_control(error)

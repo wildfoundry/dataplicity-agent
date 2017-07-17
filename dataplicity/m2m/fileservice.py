@@ -42,13 +42,13 @@ class FileService(threading.Thread):
         return self._repr
 
     @classmethod
-    def send_error(cls, channel, status, **extra):
+    def send_error(cls, channel, status, msg, **extra):
         """Send a control packet with an error"""
         error = {
             "service":"read-file",
             "type": "error",
             "status": status,
-            "msg": ""
+            "msg": msg
         }
         error.update(extra)
         channel.send_control(error)
