@@ -75,7 +75,7 @@ class CommandService(threading.Thread):
 
         bytes_sent = 0
         stdout_fh = process.stdout.fileno()
-        stderr_fp = process.stderr.fileno()
+        stderr_fh = process.stderr.fileno()
         try:
             while True:
                 if channel.is_closed:
