@@ -81,7 +81,7 @@ class CommandService(threading.Thread):
 
                 if stdout_fh in readable:
                     # Send stdout over m2m
-                    chunk = os.read(fh, self.CHUNK_SIZE)
+                    chunk = os.read(stdout_fh, self.CHUNK_SIZE)
                     if not chunk:
                         log.debug('%r EOF', self)
                         break
@@ -89,7 +89,7 @@ class CommandService(threading.Thread):
                     bytes_sent += len(chunk)
                 if stderr_fh in readable:
                     # Log stderr
-                    chunk = os.read(fh, self.CHUNK_SIZE)
+                    chunk = os.read(stderro_fh, self.CHUNK_SIZE)
                     log.debug("%r [stderr] %r", self, chunk)
             else:
                 log.debug('%r complete', self)
@@ -107,10 +107,11 @@ class CommandService(threading.Thread):
                 command
             )
         finally:
+
             channel.send_control({
                 'service': 'run-command',
                 'type': 'complete',
-                'returncode': process.returncode
+                'returncode': process.poll()
             })
             channel.close()
             process.terminate()
