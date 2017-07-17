@@ -41,7 +41,8 @@ class FileService(threading.Thread):
     def __repr__(self):
         return self._repr
 
-    def send_error(self, channel, status, **extra):
+    @classmethod
+    def send_error(cls, channel, status, **extra):
         """Send a control packet with an error"""
         error = {
             "service":"read-file",

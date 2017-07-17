@@ -355,7 +355,11 @@ class WSClient(threading.Thread):
     def channel_control_write(self, channel, data):
         """Send a channel control packet."""
         control_json = json.dumps(data)
-        self.channel_write(channel, control_json)
+        self.send(
+            PacketType.request_send_control,
+            channel=channel,
+            data=control_json
+        )
 
     # --------------------------------------------------------
     # Packet handlers

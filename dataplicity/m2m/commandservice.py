@@ -49,7 +49,8 @@ class CommandService(threading.Thread):
         error.update(extra)
         channel.send_control(error)
 
-    def run_service(self, channel, command):
+    @classmethod
+    def run_service(cls, channel, command):
         """Run the thread and log exceptions."""
         try:
             self._run_service(channel, command)
