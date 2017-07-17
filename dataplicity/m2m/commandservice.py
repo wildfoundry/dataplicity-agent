@@ -107,11 +107,14 @@ class CommandService(threading.Thread):
                 command
             )
         finally:
-
             channel.send_control({
                 'service': 'run-command',
                 'type': 'complete',
                 'returncode': process.poll()
             })
             channel.close()
-            process.terminate()
+            try:
+                if process.poll() is not None:
+                    process.kill()
+            except OSError:
+                log.exception('%r failed to kill', self)
