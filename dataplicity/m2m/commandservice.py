@@ -89,7 +89,7 @@ class CommandService(threading.Thread):
                     bytes_sent += len(chunk)
                 if stderr_fh in readable:
                     # Log stderr
-                    chunk = os.read(stderro_fh, self.CHUNK_SIZE)
+                    chunk = os.read(stderr_fh, self.CHUNK_SIZE)
                     log.debug("%r [stderr] %r", self, chunk)
             else:
                 log.debug('%r complete', self)
