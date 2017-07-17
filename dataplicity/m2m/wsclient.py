@@ -157,7 +157,7 @@ class Channel(object):
     def send_control(self, data):
         """Write a control packet."""
         with self._lock:
-            self.client.channel_control_write(data)
+            self.client.channel_control_write(self.number, data)
 
     def get_file(self):
         return ChannelFile(self.client, self.number)
