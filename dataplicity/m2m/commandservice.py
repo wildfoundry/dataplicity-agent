@@ -61,18 +61,12 @@ class CommandService(threading.Thread):
     def _run_service(self, channel, command):
         """Run command and send stdout over m2m."""
         log.debug("%r started", self)
-        try:
-            process = subprocess.Popen(
-                command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                shell=True
-            )
-        except OSError as error:
-            log.warning('%r command failed; %s', self, error)
-            self.send_error(channel, "fail", "failed to run command")
-            return
-
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True
+        )
         bytes_sent = 0
         stdout_fh = process.stdout.fileno()
         stderr_fh = process.stderr.fileno()
@@ -84,19 +78,19 @@ class CommandService(threading.Thread):
                 readable, _, _ = select.select(
                     [stdout_fh, stderr_fh], [], [], 0.5
                 )
-                for fh in readable:
-                    if fh == stdout_fh:
-                        # Send stdout over m2m
-                        chunk = os.read(fh, self.CHUNK_SIZE)
-                        if not chunk:
-                            log.debug('%r EOF', self)
-                            break
-                        channel.write(chunk)
-                        bytes_sent += len(chunk)
-                    elif fh == stderr_fh:
-                        # Log stderr
-                        chunk = os.read(fh, self.CHUNK_SIZE)
-                        log.debug("%r [stderr] %r", self, chunk)
+
+                if stdout_fh in readable:
+                    # Send stdout over m2m
+                    chunk = os.read(fh, self.CHUNK_SIZE)
+                    if not chunk:
+                        log.debug('%r EOF', self)
+                        break
+                    channel.write(chunk)
+                    bytes_sent += len(chunk)
+                if stderr_fh in readable:
+                    # Log stderr
+                    chunk = os.read(fh, self.CHUNK_SIZE)
+                    log.debug("%r [stderr] %r", self, chunk)
             else:
                 log.debug('%r complete', self)
 
@@ -113,5 +107,10 @@ class CommandService(threading.Thread):
                 command
             )
         finally:
+            channel.send_control({
+                'service': 'run-command',
+                'type': 'complete',
+                'returncode': process.returncode
+            })
             channel.close()
             process.terminate()
