@@ -41,12 +41,25 @@ class FileService(threading.Thread):
     def __repr__(self):
         return self._repr
 
+    @classmethod
+    def send_error(cls, channel, status, msg, **extra):
+        """Send a control packet with an error"""
+        error = {
+            "service":"remote-file",
+            "type": "error",
+            "status": status,
+            "msg": msg
+        }
+        error.update(extra)
+        channel.send_control(error)
+
     def run_service(self, channel, path):
         """Run the thread and log exceptions."""
         try:
             self._run_service(channel, path)
         except Exception:
             log.exception("error running %r", self)
+            self.send_error(channel, "error", "internal error, see agent logs")
 
     def _run_service(self, channel, path):
         """Send a file over a port."""
@@ -62,10 +75,12 @@ class FileService(threading.Thread):
                     channel.write(chunk)
                     bytes_sent += len(chunk)
         except IOError:
+            self.send_error(channel, "ioerror", msg="unable to open file")
             log.debug('unable to read file "%s"', path)
         except WebSocketError as websocket_error:
             log.warning('websocket error (%s)', websocket_error)
         except Exception:
+            self.send_error(channel, "error", "internal error, see agent logs")
             log.exception('error in file service')
         else:
             log.info(

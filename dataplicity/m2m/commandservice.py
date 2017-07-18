@@ -38,48 +38,68 @@ class CommandService(threading.Thread):
     def __repr__(self):
         return self._repr
 
+    @classmethod
+    def send_error(cls, channel, status, msg, **extra):
+        """Send a control packet with an error"""
+        error = {
+            "service":"command",
+            "type": "error",
+            "status": status,
+            "msg": msg
+        }
+        error.update(extra)
+        channel.send_control(error)
+
     def run_service(self, channel, command):
         """Run the thread and log exceptions."""
         try:
             self._run_service(channel, command)
         except Exception:
             log.exception("error running %r", self)
+            self.send_error(channel, "error", "error running command")
 
     def _run_service(self, channel, command):
         """Run command and send stdout over m2m."""
         log.debug("%r started", self)
-        try:
-            process = subprocess.Popen(
-                command,
-                stdout=subprocess.PIPE,
-                shell=True
-            )
-        except OSError as error:
-            log.warning('%r command failed; %s', self, error)
-            return
-
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True
+        )
         bytes_sent = 0
-        fh = process.stdout.fileno()
+        stdout_fh = process.stdout.fileno()
+        stderr_fh = process.stderr.fileno()
         try:
             while True:
                 if channel.is_closed:
                     log.debug("%r channel closed", self)
                     break
-                readable, _, _ = select.select([fh], [], [], 0.5)
-                if readable:
-                    chunk = os.read(fh, self.CHUNK_SIZE)
+                readable, _, _ = select.select(
+                    [stdout_fh, stderr_fh], [], [], 0.5
+                )
+
+                if stdout_fh in readable:
+                    # Send stdout over m2m
+                    chunk = os.read(stdout_fh, self.CHUNK_SIZE)
                     if not chunk:
                         log.debug('%r EOF', self)
                         break
                     channel.write(chunk)
                     bytes_sent += len(chunk)
+                if stderr_fh in readable:
+                    # Log stderr
+                    chunk = os.read(stderr_fh, self.CHUNK_SIZE)
+                    log.debug("%r [stderr] %r", self, chunk)
             else:
                 log.debug('%r complete', self)
 
         except WebSocketError as websocket_error:
             log.warning('%r websocket error (%s)', self, websocket_error)
+            # Can't send error message if websocket is fubar
         except Exception as error:
             log.exception('%r error', self)
+            self.send_error(channel, "error", "error running command")
         else:
             log.info(
                 'read %s byte(s) from command "%s"',
@@ -87,5 +107,14 @@ class CommandService(threading.Thread):
                 command
             )
         finally:
+            channel.send_control({
+                'service': 'command',
+                'type': 'complete',
+                'returncode': process.poll()
+            })
             channel.close()
-            process.terminate()
+            try:
+                if process.poll() is None:
+                    process.kill()
+            except OSError:
+                log.exception('%r failed to kill', self)
