@@ -281,7 +281,6 @@ class PortForwardManager(object):
         self._client = weakref.ref(client)
         self._services = {}
         self._ports = {}
-        self._dynamic_ports = {}
         self._close_event = threading.Event()
 
     @property
