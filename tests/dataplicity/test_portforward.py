@@ -57,7 +57,7 @@ def test_calling_redirect_service_from_m2mmanager_works():
                 'm2m_port': 1234
             }
         )
-        assert redirect_port.call_args == call(device_port=22, m2m_port=1234)
+        assert redirect_port.call_args == call(1234, 22)
 
 
 def test_can_open_service_by_name(manager):
