@@ -25,18 +25,14 @@ class Connection(threading.Thread):
     BUFFER_SIZE = 1024 * 32
 
     def __init__(self, close_event, connection_id, channel,
-                 service=None, host_port=None):
+                 host_port, connection_complete_callback=None):
         """Initialize the connection, set up callbacks."""
         super(Connection, self).__init__()
         self._close_event = close_event
+        self.connection_complete_callback = connection_complete_callback
         self.connection_id = connection_id
         self.channel = channel
-        self._service = None
-        # this is for backward compatibility purposes
-        if service:
-            self._service = weakref.ref(service)
-        # host_port tuple will be used when there will be no service
-        self._host_port = host_port
+        self.host_port = host_port
 
         self._lock = threading.RLock()
         self.socket = None
@@ -47,18 +43,15 @@ class Connection(threading.Thread):
                                    self.on_channel_control)
 
     @property
-    def service(self):
-        if self._service:
-            return self._service()
-        return None
-
-    @property
     def close_event(self):
         """Get a threading.Event object."""
         return self._close_event
 
     def run(self):
-        """Main loop, connects to local server, reads data, and writes it to an m2m channel."""
+        """
+        Main loop, connects to local server, reads data, and writes it to an
+        m2m channel.
+        """
         bytes_written = 0
         try:
             # Connect to remote host
@@ -69,9 +62,12 @@ class Connection(threading.Thread):
             # Read all the data we can and write it to the channel
             # TODO: Rework this loop to not use the timeout
             while not self.close_event.is_set():
-                # Block for a period of time until the socket becomes readable, or there is an error
+                # Block for a period of time until the socket becomes readable,
+                # or there is an error
                 try:
-                    readable, _, exceptional = select.select([self.socket], [], [self.socket], 5.0)
+                    readable, _, exceptional = select.select(
+                        [self.socket], [], [self.socket], 5.0
+                    )
                 except Exception as e:
                     # For paranoia only.
                     log.warning('error %s in select', e)
@@ -97,8 +93,8 @@ class Connection(threading.Thread):
         finally:
             log.debug("left recv loop (read %s bytes)", bytes_written)
             # Tell service we're done with this connection
-            if self.service:
-                self.service.on_connection_complete(self.connection_id)
+            if self.connection_complete_callback:
+                self.connection_complete_callback(self.connection_id)
             # These close methods are a null operation if the objects are
             # already closed
             self.channel.close()
@@ -112,12 +108,6 @@ class Connection(threading.Thread):
                     self.socket.shutdown(socket.SHUT_RD)
                 except:
                     pass
-
-    @property
-    def host_port(self):
-        if self.service:
-            return self.service.host_port
-        return self._host_port
 
     def _shutdown_write(self):
         """Shutdown writing."""
@@ -154,8 +144,7 @@ class Connection(threading.Thread):
         # Set the timeout for initial connect, as default is too high
         _socket.settimeout(5.0)
 
-        if self.service:
-            log.debug('connecting to %s', self.service.url)
+        log.debug('connecting to %s', ':'.join(map(str, self.host_port)))
         try:
             _socket.connect(self.host_port)
         except socket.timeout:
@@ -168,8 +157,7 @@ class Connection(threading.Thread):
             log.exception('error connecting')
             return False
         else:
-            if self.service:
-                log.debug("connected to %s", self.service.url)
+            log.debug("connected to %s", ':'.join(map(str, self.host_port)))
             self.socket = _socket
             self._flush_buffer()
             return True
@@ -241,11 +229,6 @@ class Service(object):
         """A tuple of (host, port) as a convenience for socket.connect."""
         return (self.host, self.port)
 
-    @property
-    def url(self):
-        """URL of server we're connecting to."""
-        return "http://{0}:{1}".format(self.host, self.port)
-
     def connect(self, port_no):
         """Add a new connection."""
         self.m2m_port = port_no
@@ -257,7 +240,8 @@ class Service(object):
                 self.close_event,
                 connection_id,
                 channel,
-                service=self
+                self.host_port(),
+                self.on_connection_complete
             )
             self._connections[connection_id] = connection
         connection.start()
