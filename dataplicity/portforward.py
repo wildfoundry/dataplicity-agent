@@ -170,7 +170,6 @@ class Connection(threading.Thread):
         else:
             if self.service:
                 log.debug("connected to %s", self.service.url)
-            _socket.setblocking(0)  # set non-blocking
             self.socket = _socket
             self._flush_buffer()
             return True
