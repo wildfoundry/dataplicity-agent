@@ -240,7 +240,7 @@ class Service(object):
                 self.close_event,
                 connection_id,
                 channel,
-                self.host_port(),
+                self.host_port,
                 self.on_connection_complete
             )
             self._connections[connection_id] = connection
