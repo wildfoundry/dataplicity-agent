@@ -24,13 +24,10 @@ class Connection(threading.Thread):
     # Max to read at-a-time
     BUFFER_SIZE = 1024 * 32
 
-    def __init__(self, close_event, connection_id, channel,
-                 host_port, connection_complete_callback=None):
+    def __init__(self, close_event, channel, host_port):
         """Initialize the connection, set up callbacks."""
         super(Connection, self).__init__()
         self._close_event = close_event
-        self.connection_complete_callback = connection_complete_callback
-        self.connection_id = connection_id
         self.channel = channel
         self.host_port = host_port
 
@@ -92,9 +89,6 @@ class Connection(threading.Thread):
                     break
         finally:
             log.debug("left recv loop (read %s bytes)", bytes_written)
-            # Tell service we're done with this connection
-            if self.connection_complete_callback:
-                self.connection_complete_callback(self.connection_id)
             # These close methods are a null operation if the objects are
             # already closed
             self.channel.close()
@@ -202,7 +196,6 @@ class Service(object):
         self.host = host
         self.m2m_port = None
         self._connect_index = 0
-        self._connections = {}
         self._lock = threading.RLock()
 
     def __repr__(self):
@@ -234,27 +227,13 @@ class Service(object):
         self.m2m_port = port_no
         log.debug('new %r connection on port %s', self, port_no)
         with self._lock:
-            connection_id = self._connect_index = self._connect_index + 1
             channel = self.m2m.m2m_client.get_channel(port_no)
             connection = Connection(
                 self.close_event,
-                connection_id,
                 channel,
                 self.host_port,
-                self.on_connection_complete
             )
-            self._connections[connection_id] = connection
         connection.start()
-        return connection_id
-
-    def remove_connection(self, connection_id):
-        with self._lock:
-            self._connections.pop(connection_id, None)
-
-    def on_connection_complete(self, connection_id):
-        """Called by a connection when it is finished."""
-        with self._lock:
-            self.remove_connection(connection_id)
 
 
 class PortForwardManager(object):
@@ -338,7 +317,6 @@ class PortForwardManager(object):
         #
         Connection(
             close_event=self.close_event,
-            connection_id=-1,
             channel=self.m2m.m2m_client.get_channel(m2m_port),
             host_port=('127.0.0.1', device_port)
         ).start()
