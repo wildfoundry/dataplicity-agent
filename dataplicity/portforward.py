@@ -24,12 +24,12 @@ class Connection(threading.Thread):
     # Max to read at-a-time
     BUFFER_SIZE = 1024 * 32
 
-    def __init__(self, service, connection_id, channel):
+    def __init__(self, close_event, channel, host_port):
         """Initialize the connection, set up callbacks."""
         super(Connection, self).__init__()
-        self._service = weakref.ref(service)
-        self.connection_id = connection_id
+        self._close_event = close_event
         self.channel = channel
+        self.host_port = host_port
 
         self._lock = threading.RLock()
         self.socket = None
@@ -40,17 +40,15 @@ class Connection(threading.Thread):
                                    self.on_channel_control)
 
     @property
-    def service(self):
-        """Get the parent service object (weak reference, may return None)."""
-        return self._service()
-
-    @property
     def close_event(self):
         """Get a threading.Event object."""
-        return self.service.close_event
+        return self._close_event
 
     def run(self):
-        """Main loop, connects to local server, reads data, and writes it to an m2m channel."""
+        """
+        Main loop, connects to local server, reads data, and writes it to an
+        m2m channel.
+        """
         bytes_written = 0
         try:
             # Connect to remote host
@@ -61,9 +59,12 @@ class Connection(threading.Thread):
             # Read all the data we can and write it to the channel
             # TODO: Rework this loop to not use the timeout
             while not self.close_event.is_set():
-                # Block for a period of time until the socket becomes readable, or there is an error
+                # Block for a period of time until the socket becomes readable,
+                # or there is an error
                 try:
-                    readable, _, exceptional = select.select([self.socket], [], [self.socket], 5.0)
+                    readable, _, exceptional = select.select(
+                        [self.socket], [], [self.socket], 5.0
+                    )
                 except Exception as e:
                     # For paranoia only.
                     log.warning('error %s in select', e)
@@ -88,9 +89,8 @@ class Connection(threading.Thread):
                     break
         finally:
             log.debug("left recv loop (read %s bytes)", bytes_written)
-            # Tell service we're done with this connection
-            self.service.on_connection_complete(self.connection_id)
-            # These close methods are a null operation if the objects are already closed
+            # These close methods are a null operation if the objects are
+            # already closed
             self.channel.close()
             self._shutdown_read()
 
@@ -138,9 +138,9 @@ class Connection(threading.Thread):
         # Set the timeout for initial connect, as default is too high
         _socket.settimeout(5.0)
 
-        log.debug('connecting to %s', self.service.url)
+        log.debug('connecting to %s:%d', *self.host_port)
         try:
-            _socket.connect(self.service.host_port)
+            _socket.connect(self.host_port)
         except socket.timeout:
             log.error('timed out connecting to server')
             return False
@@ -151,7 +151,7 @@ class Connection(threading.Thread):
             log.exception('error connecting')
             return False
         else:
-            log.debug("connected to %s", self.service.url)
+            log.debug("connected to %s:%d", *self.host_port)
             self.socket = _socket
             self._flush_buffer()
             return True
@@ -194,8 +194,8 @@ class Service(object):
         self.name = name
         self.port = port
         self.host = host
+        self.m2m_port = None
         self._connect_index = 0
-        self._connections = {}
         self._lock = threading.RLock()
 
     def __repr__(self):
@@ -222,30 +222,18 @@ class Service(object):
         """A tuple of (host, port) as a convenience for socket.connect."""
         return (self.host, self.port)
 
-    @property
-    def url(self):
-        """URL of server we're connecting to."""
-        return "http://{0}:{1}".format(self.host, self.port)
-
     def connect(self, port_no):
         """Add a new connection."""
+        self.m2m_port = port_no
         log.debug('new %r connection on port %s', self, port_no)
         with self._lock:
-            connection_id = self._connect_index = self._connect_index + 1
             channel = self.m2m.m2m_client.get_channel(port_no)
-            connection = Connection(self, connection_id, channel)
-            self._connections[connection_id] = connection
+            connection = Connection(
+                self.close_event,
+                channel,
+                self.host_port,
+            )
         connection.start()
-        return connection_id
-
-    def remove_connection(self, connection_id):
-        with self._lock:
-            self._connections.pop(connection_id, None)
-
-    def on_connection_complete(self, connection_id):
-        """Called by a connection when it is finished."""
-        with self._lock:
-            self.remove_connection(connection_id)
 
 
 class PortForwardManager(object):
@@ -317,9 +305,18 @@ class PortForwardManager(object):
             return
         service.connect(m2m_port)
 
-    def redirect_service(self, m2m_port, device_port):
-        service = Service(
-            manager=self, name='port-{}'.format(device_port),
-            port=device_port, host='127.0.0.1'
-        )
-        service.connect(m2m_port)
+    def redirect_port(self, m2m_port, device_port):
+        # we need to store the reference to the Service somewhere so that
+        # when the Connection starts in thread it wouldn't loose the value
+        # of service variable. However, we have to remember that there may
+        # be numerous connections to the same local port.
+        # for instance, one could be ssh'ed into a machine twice, so we
+        # shan't confuse these two connections.
+        # therefore, an easy way is to store these in a dict, so that the
+        # lookup would be quick
+        #
+        Connection(
+            close_event=self.close_event,
+            channel=self.m2m.m2m_client.get_channel(m2m_port),
+            host_port=('127.0.0.1', device_port)
+        ).start()
