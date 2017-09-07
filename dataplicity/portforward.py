@@ -144,7 +144,7 @@ class Connection(threading.Thread):
         # Set the timeout for initial connect, as default is too high
         _socket.settimeout(5.0)
 
-        log.debug('connecting to %s', ':'.join(map(str, self.host_port)))
+        log.debug('connecting to %s:%d', *self.host_port)
         try:
             _socket.connect(self.host_port)
         except socket.timeout:
@@ -157,7 +157,7 @@ class Connection(threading.Thread):
             log.exception('error connecting')
             return False
         else:
-            log.debug("connected to %s", ':'.join(map(str, self.host_port)))
+            log.debug("connected to %s:%d", *self.host_port)
             self.socket = _socket
             self._flush_buffer()
             return True
