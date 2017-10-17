@@ -172,7 +172,6 @@ class LogPacket(M2MPacket):
 class RequestSendPacket(M2MPacket):
     """Request to send data to a connection."""
 
-    no_log = False
     type = PacketType.request_send
     attributes = [('channel', int_types),
                   ('data', bytes)]
@@ -181,14 +180,12 @@ class RequestSendPacket(M2MPacket):
 class KeepAlivePacket(M2MPacket):
     """Keep alive packet."""
 
-    no_log = False
     type = PacketType.keep_alive
 
 
 class RoutePacket(M2MPacket):
     """Route data."""
 
-    no_log = False
     type = PacketType.route
     attributes = [('channel', int_types),
                   ('data', bytes)]
@@ -197,7 +194,6 @@ class RoutePacket(M2MPacket):
 class RouteControlPacket(M2MPacket):
     """Route data."""
 
-    no_log = False
     type = PacketType.route_control
     attributes = [('channel', int_types),
                   ('data', bytes)]
@@ -206,7 +202,6 @@ class RouteControlPacket(M2MPacket):
 class RequestSendControlPacket(M2MPacket):
     """Request to send data to a connection."""
 
-    no_log = False
     type = PacketType.request_send_control
     attributes = [('channel', int_types),
                   ('data', bytes)]
@@ -215,7 +210,6 @@ class RequestSendControlPacket(M2MPacket):
 class PingPacket(M2MPacket):
     """Ping packet to check connection."""
 
-    no_log = False
     type = PacketType.ping
     attributes = [('data', bytes)]
 
@@ -223,7 +217,6 @@ class PingPacket(M2MPacket):
 class PongPacket(M2MPacket):
     """Response to Ping packet."""
 
-    no_log = False
     type = PacketType.pong
     attributes = [('data', bytes)]
 
@@ -414,7 +407,6 @@ class PeerAddRoutePacket(M2MPacket):
 class PeerForwardPacket(M2MPacket):
     """Forward a packet to another node."""
 
-    no_log = True
     type = PacketType.peer_forward
     attributes = [('recipient', bytes),
                   ('packet', bytes)]
