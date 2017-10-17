@@ -7,7 +7,7 @@ Packet management
 """
 
 from . import bencode
-from ..compat import int_types, bytes_type, text_type, with_metaclass
+from ..compat import int_types, binary_type, text_type, with_metaclass
 
 
 class PacketError(Exception):
@@ -57,7 +57,7 @@ class PacketBaseType(object):
             except AttributeError:
                 continue
         def summarize(t):
-            if isinstance(t, bytes_type) and len(t) > 32:
+            if isinstance(t, binary_type) and len(t) > 32:
                 remaining = len(t) - 32
                 return "{!r} + {} bytes".format(t[:32], remaining)
             return repr(t)
