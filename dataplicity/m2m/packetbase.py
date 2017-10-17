@@ -7,7 +7,7 @@ Packet management
 """
 
 from . import bencode
-from ..compat import int_types, text_type, with_metaclass
+from ..compat import int_types, bytes_type, text_type, with_metaclass
 
 
 class PacketError(Exception):
@@ -56,8 +56,16 @@ class PacketBaseType(object):
                 data[attrib_name] = getattr(self, attrib_name)
             except AttributeError:
                 continue
+        def summarize(t):
+            if isinstance(t, bytes_type) and len(t) > 32:
+                remaining = len(t) - 32
+                return "{!r} + {} bytes".format(t[:32], remaining)
+            return repr(t)
 
-        params = ', '.join("{}={!r}".format(k, v if k != 'password' else '********') for k, v in data.items())
+        params = ', '.join("{}={}".format(
+            (k, summarize(v) if k != 'password' else '********'))
+            for k, v in data.items()
+        )
         return "{}({})".format(self.__class__.__name__, params)
 
     def process_packet_type(self, packet_type):
