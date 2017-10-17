@@ -51,20 +51,23 @@ class PacketBaseType(object):
 
     def __repr__(self):
         data = {}
-        for attrib_name, attrib_type in self.attributes:
+        for attrib_name, _attrib_type in self.attributes:
             try:
                 data[attrib_name] = getattr(self, attrib_name)
             except AttributeError:
                 continue
-        def summarize(t):
-            if isinstance(t, binary_type) and len(t) > 32:
-                remaining = len(t) - 32
-                return "{!r} + {} bytes".format(t[:32], remaining)
-            return repr(t)
 
-        params = ', '.join("{}={}".format(
-            (k, summarize(v) if k != 'password' else '********'))
-            for k, v in data.items()
+        def summarize(key, value):
+            if key == 'password':
+                return '********'
+            if isinstance(value, binary_type) and len(value) > 32:
+                remaining = len(value) - 32
+                return "{!r} + {} bytes".format(value[:32], remaining)
+            return repr(value)
+
+        params = ', '.join(
+            "{}={}".format(k, summarize(k, v))
+            for k, v in sorted(data.items())
         )
         return "{}({})".format(self.__class__.__name__, params)
 
