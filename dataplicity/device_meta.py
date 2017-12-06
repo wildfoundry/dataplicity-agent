@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 
 import platform
+import socket
 
 from . import rpi
 from ._version import __version__
@@ -20,6 +21,7 @@ def get_meta():
     meta['machine_type'] = rpi.get_machine_type()
     meta['os_version'] = get_os_version()
     meta['uname'] = get_uname()
+    meta['ip_list'] = get_ip_address_list()
     _META_CACHE = meta
     return meta
 
@@ -36,3 +38,12 @@ def get_os_version():
     # Linux is a fair assumption for now
     distro = " ".join(platform.linux_distribution()).strip()
     return distro
+
+def get_ip_address_list():
+    addr = socket.getaddrinfo(socket.gethostname(), None)
+    ip_list = []
+    try:
+        ip_list = list({i[4][0] for i in addr})
+    except IndexError:
+        pass
+    return ip_list

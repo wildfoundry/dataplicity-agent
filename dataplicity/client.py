@@ -194,6 +194,11 @@ class Client(object):
                 'device.set_uname',
                 uname=meta['uname']
             )
+            batch.call_with_id(
+                'set_ip_addresses',
+                'device.set_ip_addresses',
+                ip_list=meta['ip_list']
+            )
 
     def _check_meta(self, batch):
         """Check previously sent meta information."""
