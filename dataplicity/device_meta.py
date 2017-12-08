@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 
 import platform
 
+from .iptool import get_all_interfaces
 from . import rpi
 from ._version import __version__
 
@@ -20,6 +21,7 @@ def get_meta():
     meta['machine_type'] = rpi.get_machine_type()
     meta['os_version'] = get_os_version()
     meta['uname'] = get_uname()
+    meta['ip_list'] = get_ip_address_list()
     _META_CACHE = meta
     return meta
 
@@ -36,3 +38,15 @@ def get_os_version():
     # Linux is a fair assumption for now
     distro = " ".join(platform.linux_distribution()).strip()
     return distro
+
+def get_ip_address_list():
+    # Get the ip addresses from all the interfaces
+    try:
+        interfaces = get_all_interfaces()
+    except Exception:
+        # Sorry for the pokemon exception, but I don't know how
+        # reliable the call is, and if it fails what it will fail with.
+        # It needs some exception handling or the whole get_meta call
+        # will fail
+        return []
+    return [i[1] for i in interfaces]
