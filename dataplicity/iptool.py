@@ -29,7 +29,7 @@ def get_all_interfaces():
         fh = s.fileno()
         ifaces_bytes = fcntl.ioctl(
             fh,
-            0x8912,
+            0x8912,  # SIOCGIFCONF
             struct.pack('iL', buffer_size, if_pointer)
         )
         if_buffer_size, _pointer = struct.unpack('iL', ifaces_bytes)
