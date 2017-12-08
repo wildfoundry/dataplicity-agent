@@ -1,8 +1,6 @@
 from __future__ import unicode_literals
 
 import platform
-import re
-import subprocess
 
 from .iptool import get_all_interfaces
 from . import rpi
