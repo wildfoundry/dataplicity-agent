@@ -43,7 +43,7 @@ def get_ip_address_list():
     # Get the ip addresses from all the interfaces
     try:
         interfaces = get_all_interfaces()
-    except:
+    except Exception:
         # Sorry for the pokemon exception, but I don't know how
         # reliable the call is, and if it fails what it will fail with.
         # It needs some exception handling or the whole get_meta call

@@ -14,14 +14,14 @@ def get_all_interfaces():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     max_possible = 8 # initial value
     while True:
-        bytes = max_possible * struct_size
-        names = array.array('B', '\0' * bytes)
+        _bytes = max_possible * struct_size
+        names = array.array('B', '\0' * _bytes)
         outbytes = struct.unpack('iL', fcntl.ioctl(
             s.fileno(),
             0x8912,  # SIOCGIFCONF
-            struct.pack('iL', bytes, names.buffer_info()[0])
+            struct.pack('iL', _bytes, names.buffer_info()[0])
         ))[0]
-        if outbytes == bytes:
+        if outbytes == _bytes:
             max_possible *= 2
         else:
             break
