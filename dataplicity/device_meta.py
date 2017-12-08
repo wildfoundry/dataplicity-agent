@@ -1,8 +1,10 @@
 from __future__ import unicode_literals
 
 import platform
-import socket
+import re
+import subprocess
 
+from .iptool import get_all_interfaces
 from . import rpi
 from ._version import __version__
 
@@ -40,10 +42,15 @@ def get_os_version():
     return distro
 
 def get_ip_address_list():
-    addr = socket.getaddrinfo(socket.gethostname(), None)
-    ip_list = []
+    # Get the ip addresses from all the interfaces
     try:
-        ip_list = list({i[4][0] for i in addr})
-    except IndexError:
-        pass
-    return ip_list
+        interfaces = get_all_interfaces()
+    except:
+        '''
+        Sorry for the pokemon exception, but I don't know how
+        reliable the call is, and if it fails what it will fail with.
+        It needs some exception handling or the whole get_meta call
+        will fail
+        '''
+        return []
+    return [i[1] for i in interfaces]
