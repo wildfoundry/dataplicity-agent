@@ -1,3 +1,9 @@
+"""
+
+IP related tools.
+
+"""
+
 import sys
 import socket
 import fcntl
@@ -24,9 +30,9 @@ def get_all_interfaces():
     if_buffer = array.array('B', '\0' * MAX_INTERFACES * struct_size)
     if_pointer, buffer_size = if_buffer.buffer_info()
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    _socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        fh = s.fileno()
+        fh = _socket.fileno()
         ifaces_bytes = fcntl.ioctl(
             fh,
             0x8912,  # SIOCGIFCONF
@@ -35,7 +41,7 @@ def get_all_interfaces():
         if_buffer_size, _pointer = struct.unpack('iL', ifaces_bytes)
 
     finally:
-        s.close()
+        _socket.close()
 
     ifaces = if_buffer.tostring()
     interfaces = []
