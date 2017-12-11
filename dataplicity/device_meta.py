@@ -1,10 +1,14 @@
 from __future__ import unicode_literals
 
+import logging
 import platform
 
 from .iptool import get_all_interfaces
 from . import rpi
 from ._version import __version__
+
+
+log = logging.getLogger('agent')
 
 
 # Cache the meta dict because it never changes
@@ -44,6 +48,7 @@ def get_ip_address_list():
     try:
         interfaces = get_all_interfaces()
     except Exception:
+        log.exception('unable to retrieve interface information')
         # Sorry for the pokemon exception, but I don't know how
         # reliable the call is, and if it fails what it will fail with.
         # It needs some exception handling or the whole get_meta call
