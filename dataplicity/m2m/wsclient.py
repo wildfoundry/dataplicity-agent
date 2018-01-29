@@ -257,7 +257,7 @@ class WSClient(threading.Thread):
         """Main websocket handling loop."""
         try:
             with self.websocket:
-                for event in persist(self.websocket):
+                for event in persist(self.websocket, ping_timeout=60*5):
                     log.debug('WS %r', event)
                     try:
                         self.on_event(event)
