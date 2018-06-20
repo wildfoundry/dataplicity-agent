@@ -17,3 +17,4 @@ bin/
 reports
 *.sublime*
 *.vscode*
+.mypy_cache
