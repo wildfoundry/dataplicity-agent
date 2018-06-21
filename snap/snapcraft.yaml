@@ -1,0 +1,21 @@
+
+name: dataplicity
+version: git
+summary: Dataplicity Agent
+description: |
+  Dataplicity Agent is a service which enables remote terminals and web
+  forwarding from Dataplicity.com
+grade: devel
+confinement: devmode
+
+apps:
+  dataplicity:
+    command: bin/dataplicity run
+    daemon: simple
+
+parts:
+  dataplicity:
+    plugin: python
+    python-version: python2
+    source: ../
+
