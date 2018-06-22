@@ -18,3 +18,8 @@ reports
 *.sublime*
 *.vscode*
 .mypy_cache
+*.snap
+snap/parts
+snap/prime
+snap/stage
+snap/snap
