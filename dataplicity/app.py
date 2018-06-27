@@ -8,8 +8,8 @@ import sys
 
 from . import __version__
 from . import subcommand
-from .subcommands import *
 from .client import Client
+from .subcommands import run, version
 
 log = logging.getLogger('app')
 
