@@ -1,5 +1,5 @@
 
-name: dataplicity
+name: dataplicity-agent
 version: git
 summary: Dataplicity Agent
 description: |
@@ -10,7 +10,7 @@ confinement: devmode
 
 apps:
   dataplicity:
-    command: bin/dataplicity run
+    command: bin/dataplicity --log-file /var/log/dataplicity.log run
     daemon: simple
 
 parts:

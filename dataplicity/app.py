@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import argparse
 import logging
+import logging.config
 import sys
 
 from . import __version__
@@ -45,6 +46,8 @@ class App(object):
                             help="Display version and exit")
         parser.add_argument('--log-level', metavar='LEVEL', default='INFO',
                             help="Set log level (INFO or WARNING or ERROR or DEBUG)")
+        parser.add_argument('--log-file', metavar="PATH", default=None,
+                            help="Set log file")
         parser.add_argument('-d', '--debug', action="store_true", dest="debug", default=False,
                             help="Enables debug output")
         parser.add_argument('-s', '--server-url', metavar="URL", dest="server_url", default=None,
@@ -69,18 +72,46 @@ class App(object):
 
     def _init_logging(self):
         """Initialise logging."""
-        format = "%(asctime)s:%(name)s:%(levelname)s: %(message)s"
-        datefmt = "[%d/%b/%Y %H:%M:%S]"
+        log_format = '%(asctime)s %(name)s\t: %(message)s'
         log_level = 'CRITICAL' if self.args.quiet else self.args.log_level.upper()
-
         try:
-            level = _logging_level_names[log_level]
+            log_level_no = _logging_level_names[log_level]
         except IndexError:
             self.error('invalid log level')
 
-        logging.basicConfig(format=format,
-                            datefmt=datefmt,
-                            level=level)
+        if self.args.log_file:
+            log_config = {
+                'version': 1,
+                'disable_existing_loggers': False,
+                'formatters': {
+                    'simple': {
+                        'class': 'logging.Formatter',
+                        'format': log_format,
+                        'datefmt': '[%d/%b/%Y %H:%M:%S]'
+                    }
+                },
+                'handlers': {
+                    'file': {
+                        'level': log_level,
+                        'class': 'logging.FileHandler',
+                        'filename': self.args.log_file,
+                        'formatter': 'simple'
+                    }
+                },
+                'loggers': {
+                    '': {
+                        'level': log_level,
+                        'handlers': ['file'],
+                    }
+                }
+            }
+            logging.config.dictConfig(log_config)
+        else:
+            logging.basicConfig(
+                format=log_format,
+                datefmt="[%d/%b/%Y %H:%M:%S]",
+                level=log_level_no
+            )
 
     def make_client(self):
         """Make the client object."""

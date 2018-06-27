@@ -15,7 +15,7 @@ import threading
 import weakref
 
 
-log = logging.getLogger("portforward")
+log = logging.getLogger("pf")
 
 
 class Connection(threading.Thread):
