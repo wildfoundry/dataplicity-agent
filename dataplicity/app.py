@@ -93,7 +93,9 @@ class App(object):
                 'handlers': {
                     'file': {
                         'level': log_level,
-                        'class': 'logging.FileHandler',
+                        'class': 'logging.handlers.RotatingFileHandler',
+                        'maxBytes': 5 * 1024 * 1024,
+                        'backupCount': 5,
                         'filename': self.args.log_file,
                         'formatter': 'simple'
                     }
