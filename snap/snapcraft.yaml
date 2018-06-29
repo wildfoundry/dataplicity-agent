@@ -6,7 +6,7 @@ description: |
   Dataplicity Agent is a service which enables remote terminals and web
   forwarding from Dataplicity.com
 grade: devel
-confinement: devmode
+confinement: classic
 
 apps:
   dataplicity:
