@@ -55,7 +55,11 @@ class App(object):
         parser.add_argument('-m', '--m2m-url', metavar="WS URL", dest="m2m_url", default=None,
                             help="URL of m2m server (should start with ws:// or wss://")
         parser.add_argument('-q', '--quiet', action="store_true", default=False,
-                            help="hide output")
+                            help="Hide output")
+        parser.add_argument('--serial', dest='serial', metavar='SERIAL', default=None,
+                            help='Set Dataplicity serial')
+        parser.add_argument('--auth', dest='auth_token', metavar='KEY', default=None,
+                            help='Set Dataplicity auth token')
 
         subparsers = parser.add_subparsers(title='available sub-commands',
                                            dest="subcommand",
@@ -119,7 +123,9 @@ class App(object):
         """Make the client object."""
         client = Client(
             rpc_url=self.args.server_url,
-            m2m_url=self.args.m2m_url
+            m2m_url=self.args.m2m_url,
+            serial=self.args.serial,
+            auth_token=self.args.auth_token
         )
         return client
 

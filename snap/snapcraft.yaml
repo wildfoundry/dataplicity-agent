@@ -6,12 +6,15 @@ description: |
   Dataplicity Agent is a service which enables remote terminals and web
   forwarding from Dataplicity.com
 grade: devel
-confinement: classic
+confinement: devmode
 
 apps:
-  dataplicity:
+  dataplicity-agent:
     command: bin/dataplicity --log-file /var/log/dataplicity.log run
     daemon: simple
+
+  dataplicity:
+    command: bin/dataplicity
 
 parts:
   dataplicity:
