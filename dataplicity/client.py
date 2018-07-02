@@ -23,9 +23,11 @@ log = logging.getLogger('agent')
 class Client(object):
     """Dataplicity client."""
 
-    def __init__(self, rpc_url=None, m2m_url=None):
+    def __init__(self, rpc_url=None, m2m_url=None, serial=None, auth_token=None):
         self.rpc_url = rpc_url or constants.SERVER_URL
         self.m2m_url = m2m_url or constants.M2M_URL
+        self.auth_token = auth_token
+        self.serial = serial
         self._sync_lock = Lock()
         self._sent_meta = False
         self.exit_event = Event()
@@ -44,8 +46,8 @@ class Client(object):
             log.info('uname=%s', ' '.join(platform.uname()))
 
             self.remote = jsonrpc.JSONRPC(self.rpc_url)
-            self.serial = self._read(constants.SERIAL_LOCATION)
-            self.auth_token = self._read(constants.AUTH_LOCATION)
+            self.serial = self.serial or self._read(constants.SERIAL_LOCATION)
+            self.auth_token = self.auth_token or self._read(constants.AUTH_LOCATION)
             self.poll_rate_seconds = 60
             self.disk_poll_rate_seconds = 60 * 60
             self.next_disk_poll_time = time.time()
