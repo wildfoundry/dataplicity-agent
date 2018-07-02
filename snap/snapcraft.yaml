@@ -10,7 +10,7 @@ confinement: devmode
 
 apps:
   dataplicity-agent:
-    command: bin/dataplicity --log-file /var/log/dataplicity.log run
+    command : bin/dataplicity --log-level debug --auth 237FBqeREy3Obielp5du --serial 09a0332a-e9e8-4d87-abbd-89866fa65750 --m2m-url wss://m2m.dptestenv.com/m2m/ --server-url https://api.dptestenv.com run
     daemon: simple
 
   dataplicity:
