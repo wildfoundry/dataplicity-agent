@@ -23,6 +23,8 @@ def test_run_command(run_forever, serial_file, auth_file):
         """
         server_url = 'http://example.com'
         m2m_url = 'ws://example.com'
+        serial = None
+        auth_token = None
 
     app = App()
     # set fake command-line args
