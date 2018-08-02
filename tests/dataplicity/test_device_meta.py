@@ -19,10 +19,10 @@ def test_get_uname():
         assert ' '.join(fake_uname) == device_meta.get_uname()
 
 
-@patch('dataplicity.rpi.get_machine_type', lambda: '')
+@patch('dataplicity.rpi.get_machine_revision', lambda: '')
 def test_get_meta():
     """ test for get_meta function.
-        as this function calls get_machine_type underneath (which we test
+        as this function calls get_machine_revision underneath (which we test
         separately), we temporarily monkey-patch the output to empty string
     """
     # initially, _META_CACHE should be empty
