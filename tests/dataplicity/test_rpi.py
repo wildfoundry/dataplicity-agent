@@ -1,4 +1,4 @@
-from dataplicity.rpi import get_machine_type, RPI_REVISIONS
+from dataplicity.rpi import get_machine_revision
 from mock import patch
 import six
 
@@ -44,8 +44,8 @@ class MockOpenContext(object):
         pass
 
 
-def test_get_machine_type():
-    """ test for get_machine_type function
+def test_get_machine_revision():
+    """ test for get_machine_revision function
     """
 
     def mock_open(file_contents):
@@ -65,13 +65,13 @@ def test_get_machine_type():
     def builtin_open_name():
         return '{}.open'.format(six.moves.builtins.__name__)
 
-    for rev, expected_value in six.iteritems(RPI_REVISIONS):
-        with patch(
-            builtin_open_name(),
-            mock_open(REVISION_TEMPLATE % rev),
-            create=True
-        ):
-            assert get_machine_type() == expected_value
+    REVISION = 'abc123'
+    with patch(
+        builtin_open_name(),
+        mock_open(REVISION_TEMPLATE % REVISION),
+        create=True
+    ):
+        assert get_machine_revision() == REVISION
 
     # if the file doesn't exist, the version should be None
     with patch(
@@ -79,4 +79,4 @@ def test_get_machine_type():
         mock_open_ioerror,
         create=True
     ):
-        assert get_machine_type() is None
+        assert get_machine_revision() is None

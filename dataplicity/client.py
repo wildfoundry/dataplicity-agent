@@ -182,9 +182,9 @@ class Client(object):
                 agent_version=meta['agent_version']
             )
             batch.call_with_id(
-                'set_machine_type_result',
-                'device.set_machine_type',
-                machine_type=meta['machine_type'] or 'other'
+                'set_machine_revision_result',
+                'device.set_machine_revision',
+                revision_code=meta['machine_revision']
             )
             batch.call_with_id(
                 'set_os_version_result',
@@ -211,7 +211,7 @@ class Client(object):
         try:
             batch.check(
                 'set_agent_version_result',
-                'set_machine_type_result',
+                'set_machine_revision_result',
                 'set_os_version_result',
                 'set_uname_result'
             )
