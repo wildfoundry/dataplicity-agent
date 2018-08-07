@@ -128,7 +128,7 @@ class Interceptor(object):
         while 1:
             rfds, wfds, xfds = select.select([master_fd], [], [])
             if master_fd in rfds:
-                data = os.read(self.master_fd, 1024 * 64)
+                data = os.read(self.master_fd, 1024 * 1024)
                 self.master_read(data)
 
     def resize_terminal(self, size):

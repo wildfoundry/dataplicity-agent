@@ -22,7 +22,7 @@ class Connection(threading.Thread):
     """Handles a single remote controlled TCP/IP connection."""
 
     # Max to read at-a-time
-    BUFFER_SIZE = 1024 * 32
+    BUFFER_SIZE = 1024 * 1024
 
     def __init__(self, close_event, channel, host_port):
         """Initialize the connection, set up callbacks."""
