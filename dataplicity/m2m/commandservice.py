@@ -72,13 +72,12 @@ class CommandService(threading.Thread):
         stderr_fh = process.stderr.fileno()
         try:
             while True:
-                if channel.is_closed:
-                    log.debug("%r channel closed", self)
-                    break
                 readable, _, _ = select.select(
                     [stdout_fh, stderr_fh], [], [], 0.5
                 )
-
+                if channel.is_closed:
+                    log.debug("%r channel closed", self)
+                    break
                 if stdout_fh in readable:
                     # Send stdout over m2m
                     chunk = os.read(stdout_fh, CHUNK_SIZE)

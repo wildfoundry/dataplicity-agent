@@ -151,13 +151,15 @@ class Channel(object):
 
     def write(self, data):
         assert isinstance(data, bytes), "data must be bytes"
-        with self._lock:
-            self.client.channel_write(self.number, data)
+        if not self.is_closed:
+            with self._lock:
+                self.client.channel_write(self.number, data)
 
     def send_control(self, control):
         """Write a control packet."""
-        with self._lock:
-            self.client.channel_control_write(self.number, control)
+        if not self.is_closed:
+            with self._lock:
+                self.client.channel_control_write(self.number, control)
 
     def get_file(self):
         return ChannelFile(self.client, self.number)
