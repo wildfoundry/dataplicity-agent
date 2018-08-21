@@ -13,4 +13,4 @@ AUTH_LOCATION = '/opt/dataplicity/tuxtunnel/auth'
 MAX_TIME_SINCE_LAST_PACKET = 100.0  # seconds or None
 
 # Number of bytes to read at a time, when copying date over the network
-CHUNK_SIZE = 32 * 1024
+CHUNK_SIZE = 63 * 1024  # Yes, 63K and not 64K to account for header
