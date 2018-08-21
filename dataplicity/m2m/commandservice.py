@@ -18,14 +18,14 @@ import threading
 
 from lomond.errors import WebSocketError
 
+from .. constants import CHUNK_SIZE
+
 
 log = logging.getLogger('m2m')
 
 
 class CommandService(threading.Thread):
     """Runs a command and sends the stdout over m2m."""
-
-    CHUNK_SIZE = 4096
 
     def __init__(self, channel, command):
         self._repr = "CommandService({!r}, {!r})".format(channel, command)
@@ -81,7 +81,7 @@ class CommandService(threading.Thread):
 
                 if stdout_fh in readable:
                     # Send stdout over m2m
-                    chunk = os.read(stdout_fh, self.CHUNK_SIZE)
+                    chunk = os.read(stdout_fh, CHUNK_SIZE)
                     if not chunk:
                         log.debug('%r EOF', self)
                         break
@@ -89,7 +89,7 @@ class CommandService(threading.Thread):
                     bytes_sent += len(chunk)
                 if stderr_fh in readable:
                     # Log stderr
-                    chunk = os.read(stderr_fh, self.CHUNK_SIZE)
+                    chunk = os.read(stderr_fh, CHUNK_SIZE)
                     log.debug("%r [stderr] %r", self, chunk)
             else:
                 log.debug('%r complete', self)
