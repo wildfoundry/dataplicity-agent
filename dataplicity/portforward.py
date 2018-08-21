@@ -16,14 +16,14 @@ import threading
 import weakref
 
 
+from .constants import CHUNK_SIZE
+
+
 log = logging.getLogger("pf")
 
 
 class Connection(threading.Thread):
     """Handles a single remote controlled TCP/IP connection."""
-
-    # Max to read at-a-time
-    BUFFER_SIZE = 1024 * 1024
 
     def __init__(self, close_event, channel, host_port):
         """Initialize the connection, set up callbacks."""
@@ -76,7 +76,7 @@ class Connection(threading.Thread):
                 if readable:
                     try:
                         # Reads *up to* BUFFER_SIZE bytes
-                        data = self.socket.recv(self.BUFFER_SIZE)
+                        data = self.socket.recv(CHUNK_SIZE)
                     except Exception:
                         log.exception('error in recv')
                         break

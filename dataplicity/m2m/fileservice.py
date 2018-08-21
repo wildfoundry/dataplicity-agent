@@ -15,6 +15,8 @@ import threading
 
 from lomond.errors import WebSocketError
 
+from ..constants import CHUNK_SIZE
+
 
 log = logging.getLogger('m2m')
 
@@ -27,8 +29,6 @@ class FileService(threading.Thread):
     # the thread maintains a reference to a m2m channel in the run
     # function, so the entire object will be garbage collected when
     # the thread exits.
-
-    CHUNK_SIZE = 4096
 
     def __init__(self, channel, path):
         self._repr = "FileService({!r}, {!r})".format(channel, path)
@@ -67,7 +67,7 @@ class FileService(threading.Thread):
         bytes_sent = 0
         try:
             with open(path, 'rb') as read_file:
-                read = partial(read_file.read, self.CHUNK_SIZE)
+                read = partial(read_file.read, CHUNK_SIZE)
                 for chunk in iter(read, b''):
                     if channel.is_closed:
                         log.warning('%r m2m closed prematurely', self)

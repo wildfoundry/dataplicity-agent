@@ -11,3 +11,6 @@ AUTH_LOCATION = '/opt/dataplicity/tuxtunnel/auth'
 
 # Client will reconnect if the server hasn't responded in this time
 MAX_TIME_SINCE_LAST_PACKET = 100.0  # seconds or None
+
+# Number of bytes to read at a time, when copying date over the network
+CHUNK_SIZE = 64 * 1024
