@@ -8,6 +8,7 @@ Reads and writes to a socket, proxied over m2m.
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from time import time
 import logging
 import select
 import socket
@@ -15,14 +16,14 @@ import threading
 import weakref
 
 
+from .constants import CHUNK_SIZE
+
+
 log = logging.getLogger("pf")
 
 
 class Connection(threading.Thread):
     """Handles a single remote controlled TCP/IP connection."""
-
-    # Max to read at-a-time
-    BUFFER_SIZE = 1024 * 1024
 
     def __init__(self, close_event, channel, host_port):
         """Initialize the connection, set up callbacks."""
@@ -32,6 +33,7 @@ class Connection(threading.Thread):
         self.host_port = host_port
 
         self._lock = threading.RLock()
+        self._start_time = time()
         self.socket = None
         self.read_buffer = []  # For data received before we connected
 
@@ -69,11 +71,13 @@ class Connection(threading.Thread):
                     # For paranoia only.
                     log.warning('error %s in select', e)
                     break
+                if self.channel.is_closed:
+                    break
                 if readable:
                     try:
                         # Reads *up to* BUFFER_SIZE bytes
-                        data = self.socket.recv(self.BUFFER_SIZE)
-                    except:
+                        data = self.socket.recv(CHUNK_SIZE)
+                    except Exception:
                         log.exception('error in recv')
                         break
                     else:
@@ -88,7 +92,8 @@ class Connection(threading.Thread):
                     # m2m channel closing
                     break
         finally:
-            log.debug("left recv loop (read %s bytes)", bytes_written)
+            speed = bytes_written / 1024.0 / (time() - self._start_time)
+            log.debug("left recv loop (read %s bytes) %0.1fKB/s ", bytes_written, speed)
             # These close methods are a null operation if the objects are
             # already closed
             self.channel.close()
@@ -147,7 +152,7 @@ class Connection(threading.Thread):
         except IOError as e:
             log.error('IO Error when connecting, %s', e)
             return False
-        except:
+        except Exception:
             log.exception('error connecting')
             return False
         else:
