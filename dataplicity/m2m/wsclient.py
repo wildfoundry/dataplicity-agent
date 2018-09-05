@@ -36,12 +36,12 @@ class ChannelFile(object):
         self.client = client
         self.channel_no = channel_no
 
-    def write(self, data):
+    def write(self, data, regulate_speed=True):
         # http://stackoverflow.com/questions/23932332/writing-bytes-to-standard-output-in-a-way-compatible-with-both-python2-and-pyth
         # retrieve stdout as a binary file object
         output = getattr(sys.stdout, 'buffer', sys.stdout)
         output.write(data)
-        self.client.channel_write(self.channel_no, data)
+        self.client.channel_write(self.channel_no, data, regulate_speed=regulate_speed)
 
     def fileno(self):
         return None
@@ -200,6 +200,7 @@ class WSClient(threading.Thread):
 
         self.name = "m2m"  # Thread name
         self.daemon = True
+        self._resume_time = None
 
     def __repr__(self):
         """Return the URL."""
@@ -346,8 +347,13 @@ class WSClient(threading.Thread):
         else:
             self.dispatcher.dispatch(packet_type, packet_body)
 
-    def channel_write(self, channel, data):
+    def channel_write(self, channel, data, regulate_speed=True):
         """Write data to a virtual channel."""
+        if self._resume_time is not None and regulate_speed:
+            wait_for = self._resume_time - time.time()
+            if wait_for > 0:
+                # This will block a thread from writing for a while
+                time.sleep(wait_for)
         self.send(PacketType.request_send, channel=channel, data=data)
 
     def on_instruction(self, sender, data):
@@ -449,5 +455,11 @@ class WSClient(threading.Thread):
         """An instruction packet contains application specific data."""
         try:
             self.on_instruction(sender, data)
-        except:
+        except Exception:
             log.exception('error handling instruction')
+
+    @expose(PacketType.pause)
+    def on_pause(self, delay):
+        """Server wants us to slow down."""
+        self._resume_time = time.time() + delay
+        log.debug("server requests delay %sms", delay)

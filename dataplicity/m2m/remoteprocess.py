@@ -64,7 +64,7 @@ class RemoteProcess(proxy.Interceptor):
         self.close()
 
     def master_read(self, data):
-        self.channel.write(data)
+        self.channel.write(data, regulate_speed=False)
         super(RemoteProcess, self).master_read(data)
 
     def write_master(self, data):

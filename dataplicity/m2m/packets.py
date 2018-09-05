@@ -79,6 +79,9 @@ class PacketType(IntEnum):
     # Send a route_control packet
     request_send_control = 22
 
+    # Pause route data
+    pause = 24
+
     response = 100
 
     command_add_route = 101
@@ -205,6 +208,13 @@ class RequestSendControlPacket(M2MPacket):
     type = PacketType.request_send_control
     attributes = [('channel', int_types),
                   ('data', bytes)]
+
+
+class Pause(M2MPacket):
+    """Pause route data."""
+
+    type = PacketType.pause
+    attributes = [('delay', int_types)]
 
 
 class PingPacket(M2MPacket):
