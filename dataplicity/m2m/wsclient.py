@@ -149,11 +149,11 @@ class Channel(object):
 
         return b''.join(incoming_bytes)
 
-    def write(self, data):
+    def write(self, data, regulate_speed=True):
         assert isinstance(data, bytes), "data must be bytes"
         if not self.is_closed:
             with self._lock:
-                self.client.channel_write(self.number, data)
+                self.client.channel_write(self.number, data, regulate_speed=regulate_speed)
 
     def send_control(self, control):
         """Write a control packet."""
