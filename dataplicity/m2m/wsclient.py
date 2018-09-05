@@ -461,5 +461,5 @@ class WSClient(threading.Thread):
     @expose(PacketType.pause)
     def on_pause(self, packet_type, delay):
         """Server wants us to slow down."""
-        self._resume_time = time.time() + delay
+        self._resume_time = time.time() + (delay / 1000.0)
         log.debug("server requests delay %sms", delay)
