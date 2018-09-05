@@ -459,7 +459,7 @@ class WSClient(threading.Thread):
             log.exception('error handling instruction')
 
     @expose(PacketType.pause)
-    def on_pause(self, delay):
+    def on_pause(self, packet_type, delay):
         """Server wants us to slow down."""
         self._resume_time = time.time() + delay
         log.debug("server requests delay %sms", delay)
