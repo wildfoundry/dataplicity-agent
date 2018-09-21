@@ -42,7 +42,7 @@ class CommandService(threading.Thread):
     def send_error(cls, channel, status, msg, **extra):
         """Send a control packet with an error"""
         error = {
-            "service":"command",
+            "service": "command",
             "type": "error",
             "status": status,
             "msg": msg
