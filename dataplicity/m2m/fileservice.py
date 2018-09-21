@@ -45,7 +45,7 @@ class FileService(threading.Thread):
     def send_error(cls, channel, status, msg, **extra):
         """Send a control packet with an error"""
         error = {
-            "service":"remote-file",
+            "service": "remote-file",
             "type": "error",
             "status": status,
             "msg": msg
