@@ -65,7 +65,12 @@ def get_ip_address_list():
 
 def get_tag_list():
     """Run the taglist.sh script, get output as a list of tags"""
-    output = subprocess.check_output(TAG_SCRIPT)
+    try:
+        output = subprocess.check_output(TAG_SCRIPT)
+    except (OSError, subprocess.CalledProcessError) as error:
+        log.error(error)
+        return []
+
     # regex split on comma, spaces, newline and tabs
     tag_list = re.split(r"[,\s\n\t]", output)
     return [tag for tag in tag_list if tag != ""]
