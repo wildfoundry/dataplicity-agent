@@ -16,7 +16,7 @@ log = logging.getLogger("agent")
 # Cache the meta dict because it never changes
 _META_CACHE = None
 
-TAG_SCRIPT = "/home/dataplicity/dataplicity.tags.sh"
+TAG_SCRIPT = "/home/dataplicity/dataplicity.tags"
 
 
 def get_meta():
