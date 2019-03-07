@@ -17,7 +17,7 @@ from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
 import six
 
-log = logging.getLogger('agent')
+log = logging.getLogger("agent")
 
 
 class Client(object):
@@ -36,14 +36,14 @@ class Client(object):
     @classmethod
     def _read(cls, path):
         """Read contents of a file, strip whitespace."""
-        with open(path, 'rt') as fh:
+        with open(path, "rt") as fh:
             data = fh.read().strip()
         return data
 
     def _init(self):
         try:
-            log.info('dataplicity %s', __version__)
-            log.info('uname=%s', ' '.join(platform.uname()))
+            log.info("dataplicity %s", __version__)
+            log.info("uname=%s", " ".join(platform.uname()))
 
             self.remote = jsonrpc.JSONRPC(self.rpc_url)
             self.serial = self.serial or self._read(constants.SERIAL_LOCATION)
@@ -52,16 +52,16 @@ class Client(object):
             self.disk_poll_rate_seconds = 60 * 60
             self.next_disk_poll_time = time.time()
 
-            log.info('m2m=%s', self.m2m_url)
-            log.info('api=%s', self.rpc_url)
-            log.info('serial=%s', self.serial)
-            log.info('poll=%s', self.poll_rate_seconds)
+            log.info("m2m=%s", self.m2m_url)
+            log.info("api=%s", self.rpc_url)
+            log.info("serial=%s", self.serial)
+            log.info("poll=%s", self.poll_rate_seconds)
 
             self.m2m = M2MManager.init(self, m2m_url=self.m2m_url)
             self.port_forward = PortForwardManager.init(self)
 
         except:
-            log.exception('failed to initialize client')
+            log.exception("failed to initialize client")
             raise
 
     def run_forever(self):
@@ -74,17 +74,17 @@ class Client(object):
             while not self.exit_event.wait(self.poll_rate_seconds):
                 self.poll()
         except SystemExit:
-            log.debug('exit requested')
+            log.debug("exit requested")
             return
         except KeyboardInterrupt:
-            log.debug('user exit')
+            log.debug("user exit")
             return
         finally:
             clock_check_thread.running = False
             clock_check_thread.join()
-            log.debug('closing')
+            log.debug("closing")
             self.close()
-            log.debug('goodbye')
+            log.debug("goodbye")
 
     def exit(self):
         """Exit the agent."""
@@ -95,27 +95,27 @@ class Client(object):
 
         if now >= self.next_disk_poll_time:
             self.next_disk_poll_time = now + self.disk_poll_rate_seconds
-            disk_space = disk_usage('/')
+            disk_space = disk_usage("/")
 
             with self.remote.batch() as batch:
                 batch.call_with_id(
-                    'authenticate_result',
-                    'device.check_auth',
-                    device_class='tuxtunnel',
+                    "authenticate_result",
+                    "device.check_auth",
+                    device_class="tuxtunnel",
                     serial=self.serial,
-                    auth_token=self.auth_token
+                    auth_token=self.auth_token,
                 )
                 batch.call_with_id(
-                    'set_disk_space_result',
-                    'device.set_disk_space',
+                    "set_disk_space_result",
+                    "device.set_disk_space",
                     disk_capacity=disk_space.total,
-                    disk_used=disk_space.used
+                    disk_used=disk_space.used,
                 )
 
     def poll(self):
         """Called at regular intervals."""
         t = time.time()
-        log.debug('poll t=%.02fs', t)
+        log.debug("poll t=%.02fs", t)
         try:
             self.disk_poll()
         except Exception as e:
@@ -129,9 +129,8 @@ class Client(object):
     @classmethod
     def make_sync_id(cls):
         """Make a random sync ID."""
-        sync_id = ''.join(
-            random.choice('abcdefghijklmnopqrstuvwxyz')
-            for _ in six.moves.xrange(12)
+        sync_id = "".join(
+            random.choice("abcdefghijklmnopqrstuvwxyz") for _ in six.moves.xrange(12)
         )
         return sync_id
 
@@ -153,20 +152,20 @@ class Client(object):
             if not self._sent_meta:
                 with self.remote.batch() as batch:
                     batch.call_with_id(
-                        'authenticate_result',
-                        'device.check_auth',
-                        device_class='tuxtunnel',
+                        "authenticate_result",
+                        "device.check_auth",
+                        device_class="tuxtunnel",
                         serial=self.serial,
                         auth_token=self.auth_token,
-                        sync_id=sync_id
+                        sync_id=sync_id,
                     )
                     self._sync_meta(batch)
-                batch.get_result('authenticate_result')
+                batch.get_result("authenticate_result")
                 self._check_meta(batch)
 
         finally:
             elapsed = time.time() - start
-            log.debug('sync complete %0.2fs', elapsed)
+            log.debug("sync complete %0.2fs", elapsed)
 
     def _sync_meta(self, batch):
         """Sync meta information regarding host device."""
@@ -174,53 +173,58 @@ class Client(object):
             meta = device_meta.get_meta()
             log.debug("syncing meta %r", meta)
         except:
-            log.exception('error getting meta')
+            log.exception("error getting meta")
         else:
             batch.call_with_id(
-                'set_agent_version_result',
-                'device.set_agent_version',
-                agent_version=meta['agent_version']
+                "set_agent_version_result",
+                "device.set_agent_version",
+                agent_version=meta["agent_version"],
             )
             batch.call_with_id(
-                'set_machine_revision_result',
-                'device.set_machine_revision',
-                revision_code=meta['machine_revision']
+                "set_machine_revision_result",
+                "device.set_machine_revision",
+                revision_code=meta["machine_revision"],
             )
             batch.call_with_id(
-                'set_os_version_result',
-                'device.set_os_version',
-                os_version=meta['os_version']
+                "set_os_version_result",
+                "device.set_os_version",
+                os_version=meta["os_version"],
             )
             batch.call_with_id(
-                'set_uname_result',
-                'device.set_uname',
-                uname=meta['uname']
+                "set_uname_result", "device.set_uname", uname=meta["uname"]
             )
             batch.call_with_id(
-                'set_ip_addresses',
-                'device.set_ip_addresses',
-                ip_list=meta['ip_list']
+                "set_ip_addresses_result",
+                "device.set_ip_addresses",
+                ip_list=meta["ip_list"],
+            )
+            batch.call_with_id(
+                "set_machine_defined_tags_result",
+                "device.set_machine_defined_tags",
+                tag_list=meta["tag_list"],
             )
 
     def _check_meta(self, batch):
         """Check previously sent meta information."""
-        log.debug('checking meta')
+        log.debug("checking meta")
         if self._sent_meta:
-            log.debug('meta was previously sent')
+            log.debug("meta was previously sent")
             return
         try:
             batch.check(
-                'set_agent_version_result',
-                'set_machine_revision_result',
-                'set_os_version_result',
-                'set_uname_result'
+                "set_agent_version_result",
+                "set_machine_revision_result",
+                "set_os_version_result",
+                "set_uname_result",
+                "set_ip_addresses_result",
+                "set_machine_defined_tags_result",
             )
         except Exception as e:
-            log.warning('failed to set device meta (%s)', e)
+            log.warning("failed to set device meta (%s)", e)
         else:
             # Success! Don't send again.
             self._sent_meta = True
-            log.debug('sent meta')
+            log.debug("sent meta")
 
     def set_m2m_identity(self, identity):
         """
@@ -232,32 +236,40 @@ class Client(object):
             return None
 
         try:
-            log.debug('notifying server (%s) of m2m identity (%s)',
-                      self.remote.url,
-                      identity or '<None>')
+            log.debug(
+                "notifying server (%s) of m2m identity (%s)",
+                self.remote.url,
+                identity or "<None>",
+            )
             with self.remote.batch() as batch:
-                batch.call_with_id('authenticate_result',
-                                   'device.check_auth',
-                                   device_class='tuxtunnel',
-                                   serial=self.serial,
-                                   auth_token=self.auth_token)
-                batch.call_with_id('associate_result',
-                                   'm2m.associate',
-                                   identity=identity or '')
+                batch.call_with_id(
+                    "authenticate_result",
+                    "device.check_auth",
+                    device_class="tuxtunnel",
+                    serial=self.serial,
+                    auth_token=self.auth_token,
+                )
+                batch.call_with_id(
+                    "associate_result", "m2m.associate", identity=identity or ""
+                )
             # These methods may potentially throw JSONRPCErrors
-            batch.get_result('authenticate_result')
-            batch.get_result('associate_result')
+            batch.get_result("authenticate_result")
+            batch.get_result("associate_result")
         except jsonrpc.JSONRPCError as e:
-            log.error('unable to associate m2m identity ("%s"=%s, "%s")',
-                      e.method, e.code, e.message)
+            log.error(
+                'unable to associate m2m identity ("%s"=%s, "%s")',
+                e.method,
+                e.code,
+                e.message,
+            )
             return None
         except jsonrpc.ServerUnreachableError as e:
-            log.debug('set m2m identity failed, %s', e)
+            log.debug("set m2m identity failed, %s", e)
             return None
         except Exception as error:
-            log.error('unable to set m2m identity: %s', error)
+            log.error("unable to set m2m identity: %s", error)
             return None
         else:
             # If we made it here the server has acknowledged it received the identity
-            log.debug('server received m2m identity %s', identity)
+            log.debug("server received m2m identity %s", identity)
             return identity
