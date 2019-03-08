@@ -138,7 +138,11 @@ class Client(object):
         except Exception as e:
             log.error("disk poll failed %s", e)
 
-        self.tag_poll()
+        try:
+            self.tag_poll()
+        except Exception as error:
+            log.error("tag poll failed %s", error)
+
         self.sync()
 
     def close(self):
