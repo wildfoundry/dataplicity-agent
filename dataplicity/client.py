@@ -15,6 +15,7 @@ from .clockcheck import ClockCheckThread
 from .disk_tools import disk_usage
 from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
+from .tags import get_tag_list
 import six
 
 log = logging.getLogger("agent")
@@ -112,6 +113,14 @@ class Client(object):
                     disk_used=disk_space.used,
                 )
 
+    def tag_poll(self):
+        with self.remote.batch() as batch:
+            batch.call_with_id(
+                "set_machine_defined_tags_result",
+                "device.set_machine_defined_tags",
+                tag_list=get_tag_list(),
+            )
+
     def poll(self):
         """Called at regular intervals."""
         t = time.time()
@@ -120,6 +129,8 @@ class Client(object):
             self.disk_poll()
         except Exception as e:
             log.error("disk poll failed %s", e)
+
+        self.tag_poll()
         self.sync()
 
     def close(self):
@@ -198,11 +209,6 @@ class Client(object):
                 "device.set_ip_addresses",
                 ip_list=meta["ip_list"],
             )
-            batch.call_with_id(
-                "set_machine_defined_tags_result",
-                "device.set_machine_defined_tags",
-                tag_list=meta["tag_list"],
-            )
 
     def _check_meta(self, batch):
         """Check previously sent meta information."""
@@ -217,7 +223,6 @@ class Client(object):
                 "set_os_version_result",
                 "set_uname_result",
                 "set_ip_addresses_result",
-                "set_machine_defined_tags_result",
             )
         except Exception as e:
             log.warning("failed to set device meta (%s)", e)

@@ -2,8 +2,6 @@ from __future__ import unicode_literals
 
 import logging
 import platform
-import subprocess
-import re
 
 from .iptool import get_all_interfaces
 from . import rpi
@@ -15,8 +13,6 @@ log = logging.getLogger("agent")
 
 # Cache the meta dict because it never changes
 _META_CACHE = None
-
-TAG_SCRIPT = "/home/dataplicity/dataplicity.tags"
 
 
 def get_meta():
@@ -30,7 +26,6 @@ def get_meta():
     meta["os_version"] = get_os_version()
     meta["uname"] = get_uname()
     meta["ip_list"] = get_ip_address_list()
-    meta["tag_list"] = get_tag_list()
     _META_CACHE = meta
     return meta
 
@@ -61,20 +56,3 @@ def get_ip_address_list():
         # will fail
         return []
     return [i[1] for i in interfaces]
-
-
-def get_tag_list():
-    """Run the taglist.sh script, get output as a list of tags"""
-    try:
-        output = subprocess.check_output(TAG_SCRIPT)
-    except (OSError, subprocess.CalledProcessError) as error:
-        log.error(error)
-        return []
-
-    # regex split on comma, spaces, newline and tabs
-    tag_list = re.split(r"[,\s\n\t]", output)
-    return [
-        tag.strip().decode("utf8", errors="ignore")[:25]
-        for tag in tag_list
-        if tag != ""
-    ]
