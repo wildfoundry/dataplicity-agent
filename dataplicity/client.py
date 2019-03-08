@@ -114,6 +114,7 @@ class Client(object):
                 )
 
     def tag_poll(self):
+        """Gets the tag list for get_tag_list() and sends to the server"""
         with self.remote.batch() as batch:
             batch.call_with_id(
                 "authenticate_result",
