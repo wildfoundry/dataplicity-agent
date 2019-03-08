@@ -10,6 +10,10 @@ log = logging.getLogger("agent")
 TAG_SCRIPT = "/home/dataplicity/dataplicity.tags"
 
 
+class TagException(Exception):
+    pass
+
+
 def get_tag_list():
     """Run the dataplicity.tags script, get output as a list of tags"""
     try:
@@ -18,7 +22,7 @@ def get_tag_list():
         return []
     except Exception as error:
         log.error(error)
-        return []
+        raise TagException
 
     # regex split on comma, spaces, newline and tabs
     tag_list = re.split(r"[,\s\n\t]", output)

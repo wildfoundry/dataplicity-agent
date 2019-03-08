@@ -15,7 +15,7 @@ from .clockcheck import ClockCheckThread
 from .disk_tools import disk_usage
 from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
-from .tags import get_tag_list
+from .tags import get_tag_list, TagException
 import six
 
 log = logging.getLogger("agent")
@@ -116,7 +116,11 @@ class Client(object):
 
     def tag_poll(self):
         """Gets the tag list for get_tag_list() and sends to the server"""
-        tag_list = get_tag_list()
+        try:
+            tag_list = get_tag_list()
+        except TagException:
+            return
+
         if tag_list != self._tag_list:
             self._tag_list = tag_list
             with self.remote.batch() as batch:
