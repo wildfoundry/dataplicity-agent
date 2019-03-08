@@ -13,6 +13,6 @@ virtualenv -qq .build -p Python2.7
 source .build/bin/activate
 pip -q install pex==1.2.13
 echo building ./bin/dataplicity
-pex dataplicity==0.4.33a0 --pre -r requirements.txt -o bin/dataplicity -m dataplicity.app:main
+pex dataplicity==0.4.33a1 --pre -r requirements.txt -o bin/dataplicity -m dataplicity.app:main
 deactivate
 echo built dataplicity agent v`./bin/dataplicity version`
