@@ -114,12 +114,14 @@ class Client(object):
                 )
 
     def tag_poll(self):
+        log.info("Polling tags...")
         with self.remote.batch() as batch:
             batch.call_with_id(
                 "set_machine_defined_tags_result",
                 "device.set_machine_defined_tags",
                 tag_list=get_tag_list(),
             )
+        log.info("Tags: %s", ",".join(get_tag_list()))
 
     def poll(self):
         """Called at regular intervals."""
