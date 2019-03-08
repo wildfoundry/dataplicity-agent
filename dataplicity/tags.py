@@ -14,6 +14,8 @@ def get_tag_list():
     """Run the dataplicity.tags script, get output as a list of tags"""
     try:
         output = subprocess.check_output(TAG_SCRIPT)
+    except IOError:
+        return []
     except Exception as error:
         log.error(error)
         return []
