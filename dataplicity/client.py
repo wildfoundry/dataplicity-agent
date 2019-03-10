@@ -122,7 +122,6 @@ class Client(object):
             return
 
         if tag_list != self._tag_list:
-            self._tag_list = tag_list
             with self.remote.batch() as batch:
                 batch.call_with_id(
                     "authenticate_result",
@@ -136,6 +135,13 @@ class Client(object):
                     "device.set_machine_defined_tags",
                     tag_list=tag_list,
                 )
+            try:
+                batch.check("set_machine_defined_tags_result")
+            except Exception as e:
+                log.warning("failed to set machine defined tags (%s)", e)
+            else:
+                # Success! Set cached tag list
+                self._tag_list = tag_list
 
     def poll(self):
         """Called at regular intervals."""
