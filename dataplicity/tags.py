@@ -7,7 +7,7 @@ import logging
 log = logging.getLogger("agent")
 
 
-TAG_SCRIPT = "/home/dataplicity/dataplicity.tags"
+TAG_SCRIPT = "/home/dataplicity/dataplicity_tags"
 
 
 class TagException(Exception):
