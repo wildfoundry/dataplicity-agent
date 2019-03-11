@@ -121,27 +121,39 @@ class Client(object):
         except TagException:
             return
 
-        if tag_list != self._tag_list:
-            with self.remote.batch() as batch:
-                batch.call_with_id(
-                    "authenticate_result",
-                    "device.check_auth",
-                    device_class="tuxtunnel",
-                    serial=self.serial,
-                    auth_token=self.auth_token,
-                )
-                batch.call_with_id(
-                    "set_machine_defined_tags_result",
-                    "device.set_machine_defined_tags",
-                    tag_list=tag_list,
-                )
-            try:
-                batch.check("set_machine_defined_tags_result")
-            except Exception as e:
-                log.warning("failed to set machine defined tags (%s)", e)
-            else:
-                # Success! Set cached tag list
-                self._tag_list = tag_list
+        try:
+            if tag_list != self._tag_list:
+                with self.remote.batch() as batch:
+                    batch.call_with_id(
+                        "authenticate_result",
+                        "device.check_auth",
+                        device_class="tuxtunnel",
+                        serial=self.serial,
+                        auth_token=self.auth_token,
+                    )
+                    batch.call_with_id(
+                        "set_machine_defined_tags_result",
+                        "device.set_machine_defined_tags",
+                        tag_list=tag_list,
+                    )
+                    batch.get_result("set_machine_defined_tags_result")
+        except jsonrpc.JSONRPCError as error:
+            log.error(
+                'unable to set tag list ("%s"=%s, "%s")',
+                error.method,
+                error.code,
+                error.message,
+            )
+            return None
+        except jsonrpc.ServerUnreachableError as error:
+            log.debug("set tag list failed: %s", error)
+            return None
+        except Exception as error:
+            log.error("set tag list failed: %s", error)
+            return None
+        else:
+            # Success! Set cached tag list
+            self._tag_list = tag_list
 
     def poll(self):
         """Called at regular intervals."""
