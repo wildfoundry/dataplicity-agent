@@ -11,6 +11,8 @@ TAG_SCRIPT = "/home/dataplicity/dataplicity_tags"
 
 
 class TagException(Exception):
+    """Custom exception raised when get_tag_list has an exception"""
+
     pass
 
 
