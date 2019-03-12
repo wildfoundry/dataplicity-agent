@@ -149,7 +149,7 @@ class Client(object):
             log.debug("set tag list failed: %s", error)
             return None
         except Exception as error:
-            log.error("set tag list failed: %s", error)
+            log.exception("set tag list failed")
             return None
         else:
             # Success! Set cached tag list
