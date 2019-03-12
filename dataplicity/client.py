@@ -121,6 +121,12 @@ class Client(object):
         except TagException:
             return
 
+        log.error("tag list data: %s", ",".join(tag_list))
+        if self._tag_list is None:
+            log.error("_tag_list value: %s", self._tag_list)
+        else:
+            log.error("_tag_list value: %s", ",".join(self._tag_list))
+
         try:
             if tag_list != self._tag_list:
                 with self.remote.batch() as batch:
