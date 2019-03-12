@@ -121,9 +121,6 @@ class Client(object):
         except TagException:
             return
 
-        log.error("tag list data: %s", repr(tag_list))
-        log.error("_tag_list value: %s", repr(self._tag_list))
-
         try:
             if tag_list != self._tag_list:
                 with self.remote.batch() as batch:
@@ -152,7 +149,7 @@ class Client(object):
             log.debug("set tag list failed: %s", error)
             return None
         except Exception as error:
-            log.exception("set tag list failed")
+            log.error("set tag list failed: %s", error)
             return None
         else:
             # Success! Set cached tag list
