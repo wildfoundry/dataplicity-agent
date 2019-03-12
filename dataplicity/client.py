@@ -136,7 +136,7 @@ class Client(object):
                         "device.set_machine_defined_tags",
                         tag_list=tag_list,
                     )
-                    batch.get_result("set_machine_defined_tags_result")
+                batch.get_result("set_machine_defined_tags_result")
         except jsonrpc.JSONRPCError as error:
             log.error(
                 'unable to set tag list ("%s"=%s, "%s")',
