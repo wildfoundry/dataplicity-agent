@@ -5,6 +5,7 @@ import logging
 import platform
 from threading import Event, Lock
 import random
+import sys
 import time
 
 from ._version import __version__
@@ -45,6 +46,8 @@ class Client(object):
     def _init(self):
         try:
             log.info("dataplicity %s", __version__)
+            log.info("python=%s", sys.version.replace("\n", " "))
+
             log.info("uname=%s", " ".join(platform.uname()))
 
             self.remote = jsonrpc.JSONRPC(self.rpc_url)
@@ -293,7 +296,9 @@ class Client(object):
                     auth_token=self.auth_token,
                 )
                 batch.call_with_id(
-                    "associate_result", "m2m.associate", identity=identity or ""
+                    "associate_result",
+                    "m2m.associate",
+                    identity=identity.decode("utf-8") or "",
                 )
             # These methods may potentially throw JSONRPCErrors
             batch.get_result("authenticate_result")
@@ -310,7 +315,7 @@ class Client(object):
             log.debug("set m2m identity failed, %s", e)
             return None
         except Exception as error:
-            log.error("unable to set m2m identity: %s", error)
+            log.error("unable to set m2m identity: %s", error, exc_info=False)
             return None
         else:
             # If we made it here the server has acknowledged it received the identity

@@ -8,13 +8,14 @@ import subprocess
 import threading
 
 from . import constants
+from .compat import PY3
 from .m2m import WSClient, EchoService
 from .m2m.fileservice import FileService
 from .m2m.commandservice import CommandService
 from .m2m.remoteprocess import RemoteProcess
 
 
-log = logging.getLogger('m2m')
+log = logging.getLogger("m2m")
 
 
 class Terminal(object):
@@ -32,21 +33,21 @@ class Terminal(object):
 
     def _prune_closed(self):
         """Remove closed processes."""
-        self.processes[:] = [process for process in self.processes if not process.is_closed]
+        self.processes[:] = [
+            process for process in self.processes if not process.is_closed
+        ]
 
     def launch(self, channel, size=None):
         """Launch a terminal instance."""
         if size is None:
             size = [80, 24]
         self._prune_closed()
-        log.debug('opening terminal %s', self.name)
+        log.debug("opening terminal %s", self.name)
         remote_process = None
         try:
-            remote_process = RemoteProcess(self.command,
-                                           channel,
-                                           user=self.user,
-                                           group=self.group,
-                                           size=size)
+            remote_process = RemoteProcess(
+                self.command, channel, user=self.user, group=self.group, size=size
+            )
         except:
             log.exception("error launching terminal process '%s'", self.command)
             if remote_process is not None:
@@ -63,13 +64,13 @@ class Terminal(object):
     def close(self):
         self._prune_closed()
         for process in self.processes:
-            log.debug('closing %r', self)
+            log.debug("closing %r", self)
             try:
                 if not process.is_closed:
-                    log.debug('closing %r', self)
+                    log.debug("closing %r", self)
                     process.close()
             except:
-                log.exception('error closing %s', process)
+                log.exception("error closing %s", process)
         del self.processes[:]
 
 
@@ -90,7 +91,7 @@ class M2MManager(object):
         url = m2m_url or constants.M2M_URL
         manager = cls(client, url)
         manager.m2m_client.start()
-        manager.add_terminal('shell', 'bash -i')
+        manager.add_terminal("shell", "bash -i")
         return manager
 
     def restart_agent(self):
@@ -106,7 +107,7 @@ class M2MManager(object):
         """Set the m2m identity, and also notifies the dataplicity server if required."""
         self.identity = identity
         if identity and identity != self.notified_identity:
-            log.info('m2m identity changed (%r)', identity)
+            log.info("m2m identity changed (%r)", identity)
             self.notified_identity = self.client.set_m2m_identity(identity)
 
     def on_sync(self, batch):
@@ -115,11 +116,11 @@ class M2MManager(object):
         # This shouldn't be necessary, but could mitigate any screw ups server side
         # NOTE: not currently called in agent
         if self.identity:
-            log.debug('syncing m2m identity (%s)', self.identity)
-            batch.notify('m2m.associate', identity=self.identity)
+            log.debug("syncing m2m identity (%s)", self.identity)
+            batch.notify("m2m.associate", identity=self.identity)
 
     def close(self):
-        log.debug('m2m manager close')
+        log.debug("m2m manager close")
         if self.m2m_client is not None:
             self.m2m_client.close()
 
@@ -135,37 +136,45 @@ class M2MManager(object):
     def on_instruction(self, sender, data):
         """Instructions sent by privileged client."""
         log.debug("instruction %r from %s", data, sender)
-        action = data['action']
-        if action == 'sync':
+
+        if PY3:
+
+            def decode_string(value):
+                return (
+                    value.decode("utf-8", "ignore")
+                    if isinstance(value, bytes)
+                    else value
+                )
+
+            data = dict(
+                (key.decode("utf-8", "ignore"), decode_string(value))
+                for key, value in data.items()
+            )
+        action = data["action"]
+        if action == "sync":
             self.client.sync()
-        elif action == 'open-terminal':
-            port = data['port']
-            terminal_name = data['name']
-            size = data.get('size', None)
+        elif action == "open-terminal":
+            port = data["port"]
+            terminal_name = data["name"]
+            size = data.get("size", None)
             self.open_terminal(terminal_name, port, size=size)
         elif action == "open-echo":
-            port = data['port']
+            port = data["port"]
             self.open_echo_service(port)
-        elif action == 'open-portforward':
-            service = data['service']
-            route = data['route']
+        elif action == "open-portforward":
+            service = data["service"]
+            route = data["route"]
             self.open_portforward(service, route)
-        elif action == 'open-portredirect':
-            device_port = data['device_port']
-            m2m_port = data['m2m_port']
+        elif action == "open-portredirect":
+            device_port = data["device_port"]
+            m2m_port = data["m2m_port"]
             self.client.port_forward.redirect_port(m2m_port, device_port)
-        elif action == 'reboot-device':
+        elif action == "reboot-device":
             self.reboot()
-        elif action == 'read-file':
-            self.open_file_service(
-                data['port'],
-                data['path']
-            )
-        elif action == 'run-command':
-            self.open_command_service(
-                data['port'],
-                data['command']
-            )
+        elif action == "read-file":
+            self.open_file_service(data["port"], data["path"])
+        elif action == "run-command":
+            self.open_command_service(data["port"], data["command"])
         # Unrecognized instructions are ignored
 
     def open_terminal(self, name, port, size=None):
@@ -178,7 +187,7 @@ class M2MManager(object):
 
     def open_echo_service(self, port):
         """Open an echo service (ping)."""
-        log.debug('opening echo service on m2m port %s', port)
+        log.debug("opening echo service on m2m port %s", port)
         EchoService(self.m2m_client.get_channel(port))
 
     def open_portforward(self, service, route):
@@ -188,11 +197,11 @@ class M2MManager(object):
     def reboot(self):
         """Initiate a reboot."""
         # TODO: consider initiating a graceful shutdown of dpcore that ends in a rebooot
-        command = '/usr/bin/sudo /sbin/reboot'
-        log.debug('rebooting!')
+        command = "/usr/bin/sudo /sbin/reboot"
+        log.debug("rebooting!")
         # Why not subprocess.call? Because it will block this process and prevent graceful exit!
         pid = subprocess.Popen(command.split()).pid
-        log.debug('opened reboot process %s', pid)
+        log.debug("opened reboot process %s", pid)
 
     def open_file_service(self, port, path):
         """Open a file service, to send a file over a port."""

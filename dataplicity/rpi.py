@@ -17,14 +17,14 @@ def get_machine_revision():
     """
     revision_code = None
     try:
-        with open('/proc/cpuinfo', 'rb') as fp:
+        with open("/proc/cpuinfo", "rb") as fp:
             for line in fp:
-                if ':' not in line:
+                if b":" not in line:
                     continue
-                key, _, value = line.partition(':')
+                key, _, value = line.partition(b":")
                 key = key.strip().lower()
                 value = value.strip().lower()
-                if key == 'revision':
+                if key == b"revision":
                     revision_code = value
                     break
     except IOError:
