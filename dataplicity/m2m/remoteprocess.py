@@ -43,13 +43,14 @@ class RemoteProcess(proxy.Interceptor):
     def on_data(self, data):
         try:
             self.stdin_read(data)
-        except:
+        except Exception:
+            log.exception("on_darta error")
             self.channel.close()
 
     def on_control(self, data):
         try:
             control = json.loads(data)
-        except:
+        except Exception:
             log.exception("error decoding control")
             return
         control_type = control.get("type", None)
