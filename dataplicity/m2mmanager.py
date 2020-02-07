@@ -107,7 +107,7 @@ class M2MManager(object):
         """Set the m2m identity, and also notifies the dataplicity server if required."""
         self.identity = identity
         if identity and identity != self.notified_identity:
-            log.info("m2m identity changed (%r)", identity)
+            log.info("m2m identity changed (%s)", identity.decode("utf-8", "replace"))
             self.notified_identity = self.client.set_m2m_identity(identity)
 
     def on_sync(self, batch):
