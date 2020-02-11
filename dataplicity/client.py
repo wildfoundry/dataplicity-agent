@@ -46,8 +46,8 @@ class Client(object):
     def _init(self):
         try:
             log.info("dataplicity %s", __version__)
-            log.info("python=%s", sys.version.replace("\n", " "))
-
+            log.info("python executable=%s", sys.executable)
+            log.info("python version=%s", sys.version.replace("\n", " "))
             log.info("uname=%s", " ".join(platform.uname()))
 
             self.remote = jsonrpc.JSONRPC(self.rpc_url)
