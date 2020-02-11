@@ -44,7 +44,6 @@ class RemoteProcess(proxy.Interceptor):
         try:
             self.stdin_read(data)
         except Exception:
-            log.exception("on_darta error")
             self.channel.close()
 
     def on_control(self, data):
