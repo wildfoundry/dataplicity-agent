@@ -1,6 +1,6 @@
 #!/bin/bash
 
-read -p "Build dataplicity agent v$(./bin/dataplicity version) from PyPi? " -n 1 -r
+read -p "Build dataplicity agent v$(python dataplicity/_version.py) from PyPi? " -n 1 -r
 echo
 if [[ ! "$REPLY" =~ ^[Yy]$ ]]
 then
