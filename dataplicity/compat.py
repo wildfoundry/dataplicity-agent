@@ -13,7 +13,7 @@ import sys
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
 
-# Basic types and builtine
+# Basic types and builtin
 if PY2:
     text_type = unicode
     binary_type = str
@@ -21,7 +21,7 @@ if PY2:
     xrange = xrange
     unichr = unichr
     int_types = (int, long)
-    py2bytes = lambda s: s.encode('utf-8')
+    py2bytes = lambda s: s.encode("utf-8")
     number_types = (int, long, float)
     next_method_name = "next"
     raw_input = raw_input
@@ -74,30 +74,40 @@ else:
 # For classes that convert to a unicode string, return unicode from __str__
 # and decorate with this function
 if PY2:
+
     def implements_to_string(cls):
         cls.__unicode__ = cls.__str__
-        cls.__str__ = lambda x: x.__unicode__().encode('utf-8')
+        cls.__str__ = lambda x: x.__unicode__().encode("utf-8")
         return cls
+
+
 else:
     implements_to_string = lambda x: x
 
 # To implement an iterator, call the next method __next__ and decorate the class
 # with the following
 if PY2:
+
     def implements_iterator(cls):
         cls.next = cls.__next__
         del cls.__next__
         return cls
+
+
 else:
     implements_iterator = lambda x: x
 
 # If a class converts to a bool, call the method __bool__, and decorate with this function
 if PY2:
+
     def implements_bool(cls):
         cls.__nonzero__ = cls.__bool__
         del cls.__bool__
         return cls
+
+
 else:
+
     def implements_bool(cls):
         return cls
 
@@ -111,4 +121,5 @@ def with_metaclass(meta, *bases):
             if this_bases is None:
                 return type.__new__(cls, name, (), d)
             return meta(name, bases, d)
-    return metaclass('temporary_class', None, {})
+    return metaclass("temporary_class", None, {})
+

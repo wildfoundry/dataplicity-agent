@@ -11,7 +11,7 @@ import shlex
 
 from . import proxy
 
-log = logging.getLogger('m2m')
+log = logging.getLogger("m2m")
 
 
 class RemoteProcess(proxy.Interceptor):
@@ -24,9 +24,9 @@ class RemoteProcess(proxy.Interceptor):
 
         self._closed = False
 
-        self.channel.set_callbacks(on_data=self.on_data,
-                                   on_close=self.on_close,
-                                   on_control=self.on_control)
+        self.channel.set_callbacks(
+            on_data=self.on_data, on_close=self.on_close, on_control=self.on_control
+        )
 
         super(RemoteProcess, self).__init__(user=user, group=group, size=size)
 
@@ -43,22 +43,22 @@ class RemoteProcess(proxy.Interceptor):
     def on_data(self, data):
         try:
             self.stdin_read(data)
-        except:
+        except Exception:
             self.channel.close()
 
     def on_control(self, data):
         try:
             control = json.loads(data)
-        except:
+        except Exception:
             log.exception("error decoding control")
             return
-        control_type = control.get('type', None)
+        control_type = control.get("type", None)
         if control_type == "window_resize":
-            size = control['size']
-            log.debug('resize terminal to {} X {}'.format(*size))
+            size = control["size"]
+            log.debug("resize terminal to {} X {}".format(*size))
             self.resize_terminal(size)
         else:
-            log.warning('unknown control packet {}'.format(control_type))
+            log.warning("unknown control packet {}".format(control_type))
 
     def on_close(self):
         self.close()
@@ -72,12 +72,12 @@ class RemoteProcess(proxy.Interceptor):
 
     def close(self):
         if not self._closed and self.pid is not None:
-            log.debug('sending kill signal to %r', self)
+            log.debug("sending kill signal to %r", self)
             # TODO: Implement a non-blocking kill
             os.kill(self.pid, signal.SIGKILL)
-            log.debug('waiting for %r', self)
+            log.debug("waiting for %r", self)
             os.waitpid(self.pid, 0)
-            log.debug('killed %r', self)
+            log.debug("killed %r", self)
         self._closed = True
 
     def __enter__(self):
