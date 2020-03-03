@@ -21,7 +21,7 @@ def get_tag_list():
     # Early out if the script isn't there.
     if not os.path.exists(tag_executable):
         log.debug("tag executable %s does not exist", tag_executable)
-        raise TagError("tag executable not found")
+        return []
 
     log.debug("reading tags from %s", tag_executable)
     try:
