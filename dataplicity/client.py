@@ -16,7 +16,7 @@ from .clockcheck import ClockCheckThread
 from .disk_tools import disk_usage
 from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
-from .tags import get_tag_list, TagException
+from .tags import get_tag_list, TagError
 import six
 
 log = logging.getLogger("agent")
@@ -121,7 +121,7 @@ class Client(object):
         """Gets the tag list for get_tag_list() and sends to the server"""
         try:
             tag_list = get_tag_list()
-        except TagException:
+        except TagError:
             return
 
         try:
