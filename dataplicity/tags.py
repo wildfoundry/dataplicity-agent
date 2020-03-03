@@ -35,4 +35,5 @@ def get_tag_list():
 
     # regex split on comma, spaces, newline and tabs
     tag_list = re.split(r"[,\s\n\t]", output)
-    return [tag.strip().decode("utf8", errors="ignore")[:25] for tag in tag_list if tag]
+    tags = [tag.strip().decode("utf8", errors="ignore")[:25] for tag in tag_list if tag]
+    return tags

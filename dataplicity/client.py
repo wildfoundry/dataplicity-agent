@@ -126,6 +126,7 @@ class Client(object):
 
         try:
             if tag_list != self._tag_list:
+                log.debug("new machine tags: %r", tag_list)
                 with self.remote.batch() as batch:
                     batch.call_with_id(
                         "authenticate_result",
