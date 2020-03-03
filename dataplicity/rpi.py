@@ -30,4 +30,4 @@ def get_machine_revision():
     except IOError:
         return None
     else:
-        return revision_code
+        return revision_code.decode("utf-8")
