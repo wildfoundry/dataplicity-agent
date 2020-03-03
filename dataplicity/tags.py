@@ -33,7 +33,9 @@ def get_tag_list():
         log.error("error running %s; %s", tag_executable, error)
         raise TagError("error running %s" % tag_executable)
 
+    str_output = output.decode("utf-8", errors="ignore")
+
     # regex split on comma, spaces, newline and tabs
-    tag_list = re.split(r"[,\s\n\t]", output)
-    tags = [tag.strip().decode("utf8", errors="ignore")[:25] for tag in tag_list if tag]
+    tag_list = re.split(r"[,\s\n\t]", str_output)
+    tags = [tag.strip()[:25] for tag in tag_list if tag]
     return tags
