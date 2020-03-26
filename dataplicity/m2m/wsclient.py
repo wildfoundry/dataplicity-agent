@@ -178,7 +178,7 @@ class WSClient(threading.Thread):
             __version__,
             LOMOND_USER_AGENT
         )
-        self.websocket = WebSocket(url, agent=_user_agent)
+        self.websocket = WebSocket(url, agent=_user_agent, compress=True)
         self.channel_callback = channel_callback
         self.control_callback = control_callback
 
