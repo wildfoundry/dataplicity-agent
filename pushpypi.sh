@@ -1,2 +1,4 @@
 #!/bin/bash
-sudo python setup.py sdist bdist_wheel upload
+sudo rm dist/*
+sudo python setup.py sdist bdist_wheel
+twine upload dist/*
