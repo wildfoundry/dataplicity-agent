@@ -139,7 +139,12 @@ class Interceptor(object):
 
         reading = True
         while reading:
-            for _fd, event_mask in poll.poll(5 * 1000):
+            try:
+                poll_result = poll.poll(5 * 1000)
+            except Exception as error:
+                log.warning("error in proxy.py poll.poll; %s", error)
+                break
+            for _file_descriptor, event_mask in poll_result:
                 if event_mask & readable_events:
                     data = os.read(master_fd, 1024 * 1024)
                     self.master_read(data)

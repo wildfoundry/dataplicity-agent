@@ -69,9 +69,9 @@ class Connection(threading.Thread):
                 # or there is an error
                 try:
                     poll_result = poll.poll(5 * 1000)
-                except Exception as e:
+                except Exception as error:
                     # For paranoia only.
-                    log.warning("error %s in select", e)
+                    log.warning("error in portforward.py poll.poll; %s", error)
                     break
                 if self.channel.is_closed:
                     break
