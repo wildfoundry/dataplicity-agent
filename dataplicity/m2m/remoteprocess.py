@@ -8,10 +8,59 @@ import logging
 import os
 import signal
 import shlex
+import time
+from threading import Thread
 
 from . import proxy
 
 log = logging.getLogger("m2m")
+
+
+class PidWaitThread(Thread):
+    """A thread to wait for a process to exit, and display warnings."""
+
+    def __init__(self, command, pid):
+        self.command = command
+        self.pid = pid
+        super(PidWaitThread, self).__init__()
+
+    def run(self):
+        """Poll PID for exit status, displaying warnings at given intervals if it is taking too long."""
+        start_time = time.time()
+        warnings = [
+            5,
+            10,
+            30,
+            60,
+            60 * 10,  # ten minutes
+            60 * 60,  # An hour
+            60 * 60 * 24,  # A day
+        ]  # Seconds between warnings
+        sent_kill = False
+        kill_time = 15  # Send a sigkill if process doesn't shut down (in seconds)
+        while warnings:
+            # os.WNOHANG flags makes waitpid return immediately if the process is running
+            time.sleep(5)
+            pid, exit_code = os.waitpid(self.pid, os.WNOHANG)
+            if pid:
+                # The process has returned an exit code
+                log.debug(
+                    "Remote process %s exited with code=%i", self.command, exit_code
+                )
+                break
+            else:
+                # Process is still running
+                time_passed = time.time() - start_time
+                if time_passed >= warnings[0]:
+                    warnings.pop(0)
+                    log.warning(
+                        "Remote process %s failed to exit after %.1f seconds",
+                        self.command,
+                        time_passed,
+                    )
+                if not sent_kill and time_passed >= kill_time:
+                    sent_kill = True
+                    os.kill(self.pid, signal.SIGKILL)
 
 
 class RemoteProcess(proxy.Interceptor):
@@ -21,9 +70,7 @@ class RemoteProcess(proxy.Interceptor):
         self.command = command
         self.channel = channel
         self.size = size
-
         self._closed = False
-
         self.channel.set_callbacks(
             on_data=self.on_data, on_close=self.on_close, on_control=self.on_control
         )
@@ -73,11 +120,10 @@ class RemoteProcess(proxy.Interceptor):
     def close(self):
         if not self._closed and self.pid is not None:
             log.debug("sending kill signal to %r", self)
-            # TODO: Implement a non-blocking kill
-            os.kill(self.pid, signal.SIGKILL)
+            os.kill(self.pid, signal.SIGTERM)
             log.debug("waiting for %r", self)
-            os.waitpid(self.pid, 0)
-            log.debug("killed %r", self)
+            wait_thread = PidWaitThread(self.command, self.pid)
+            wait_thread.start()
         self._closed = True
 
     def __enter__(self):

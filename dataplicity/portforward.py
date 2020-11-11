@@ -37,9 +37,9 @@ class Connection(threading.Thread):
         self.socket = None
         self.read_buffer = []  # For data received before we connected
 
-        self.channel.set_callbacks(self.on_channel_data,
-                                   self.on_channel_close,
-                                   self.on_channel_control)
+        self.channel.set_callbacks(
+            self.on_channel_data, self.on_channel_close, self.on_channel_control
+        )
 
     @property
     def close_event(self):
@@ -52,6 +52,11 @@ class Connection(threading.Thread):
         m2m channel.
         """
         bytes_written = 0
+        readable_events = select.POLLIN | select.POLLPRI  # Data in , priority data in
+        error_events = select.POLLERR | select.POLLHUP  #  Error or hang up
+        events = readable_events | error_events
+        poll = select.poll()
+        poll.register(self.socket.fileno(), events)
         try:
             # Connect to remote host
             if not self._connect():
@@ -59,38 +64,36 @@ class Connection(threading.Thread):
 
             log.debug("entered recv loop")
             # Read all the data we can and write it to the channel
-            # TODO: Rework this loop to not use the timeout
             while not self.close_event.is_set():
                 # Block for a period of time until the socket becomes readable,
                 # or there is an error
                 try:
-                    readable, _, exceptional = select.select(
-                        [self.socket], [], [self.socket], 5.0
-                    )
+                    poll_result = poll.poll(5 * 1000)
                 except Exception as e:
                     # For paranoia only.
-                    log.warning('error %s in select', e)
+                    log.warning("error %s in select", e)
                     break
                 if self.channel.is_closed:
                     break
-                if readable:
-                    try:
-                        # Reads *up to* BUFFER_SIZE bytes
-                        data = self.socket.recv(CHUNK_SIZE)
-                    except Exception:
-                        log.exception('error in recv')
-                        break
-                    else:
-                        if data:
-                            self.channel.write(data)
-                            bytes_written += len(data)
-                        else:
-                            # No data means the socket has been closed
+                for _file_descriptor, event_mask in poll_result:
+                    if event_mask & readable_events:
+                        try:
+                            # Reads *up to* BUFFER_SIZE bytes
+                            data = self.socket.recv(CHUNK_SIZE)
+                        except Exception:
+                            log.exception("error in recv")
                             break
-                if exceptional:
-                    # Socket has been closed in another thread, possibly due to
-                    # m2m channel closing
-                    break
+                        else:
+                            if data:
+                                self.channel.write(data)
+                                bytes_written += len(data)
+                            else:
+                                # No data means the socket has been closed
+                                break
+                    if event_mask & error_events:
+                        # Socket has been closed in another thread, possibly due to
+                        # m2m channel closing
+                        self.close_event.set()
         finally:
             speed = bytes_written / 1024.0 / (time() - self._start_time)
             log.debug("left recv loop (read %s bytes) %0.1fKB/s ", bytes_written, speed)
@@ -105,7 +108,7 @@ class Connection(threading.Thread):
             if self.socket:
                 try:
                     self.socket.shutdown(socket.SHUT_RD)
-                except:
+                except Exception:
                     pass
 
     def _shutdown_write(self):
@@ -114,7 +117,7 @@ class Connection(threading.Thread):
             if self.socket:
                 try:
                     self.socket.shutdown(socket.SHUT_WR)
-                except:
+                except Exception:
                     pass
 
     def _close_socket(self):
@@ -123,12 +126,12 @@ class Connection(threading.Thread):
             if self.socket is not None:
                 try:
                     self.socket.shutdown(socket.SHUT_RDWR)
-                except:
+                except Exception:
                     pass
                 try:
                     self.socket.close()
-                except:
-                    log.exception('error closing socket')
+                except Exception:
+                    log.exception("error closing socket")
 
     def connect(self):
         """Start thread, and connect to local server."""
@@ -143,17 +146,17 @@ class Connection(threading.Thread):
         # Set the timeout for initial connect, as default is too high
         _socket.settimeout(5.0)
 
-        log.debug('connecting to %s:%d', *self.host_port)
+        log.debug("connecting to %s:%d", *self.host_port)
         try:
             _socket.connect(self.host_port)
         except socket.timeout:
-            log.error('timed out connecting to server')
+            log.error("timed out connecting to server")
             return False
         except IOError as e:
-            log.error('IO Error when connecting, %s', e)
+            log.error("IO Error when connecting, %s", e)
             return False
         except Exception:
-            log.exception('error connecting')
+            log.exception("error connecting")
             return False
         else:
             log.debug("connected to %s:%d", *self.host_port)
@@ -178,7 +181,7 @@ class Connection(threading.Thread):
 
     def on_channel_close(self):
         """Called when the channel has been closed."""
-        log.debug('channel close')
+        log.debug("channel close")
         with self._lock:
             # Shut down the socket
             # This will cause an exceptional condition in the select loop,
@@ -188,7 +191,7 @@ class Connection(threading.Thread):
 
     def on_channel_control(self, data):
         """Called when the remote end sends a control packet (currently not used)."""
-        log.debug('channel control %r', data)
+        log.debug("channel control %r", data)
 
 
 class Service(object):
@@ -230,14 +233,10 @@ class Service(object):
     def connect(self, port_no):
         """Add a new connection."""
         self.m2m_port = port_no
-        log.debug('new %r connection on port %s', self, port_no)
+        log.debug("new %r connection on port %s", self, port_no)
         with self._lock:
             channel = self.m2m.m2m_client.get_channel(port_no)
-            connection = Connection(
-                self.close_event,
-                channel,
-                self.host_port,
-            )
+            connection = Connection(self.close_event, channel, self.host_port,)
         connection.start()
 
 
@@ -261,10 +260,10 @@ class PortForwardManager(object):
     @classmethod
     def init(cls, client):
         manager = cls(client)
-        manager.add_service('web', 80)
-        manager.add_service('ext', 81)
-        manager.add_service('extalt', 8000)
-        manager.add_service('alt', 8080)
+        manager.add_service("web", 80)
+        manager.add_service("ext", 81)
+        manager.add_service("extalt", 8000)
+        manager.add_service("alt", 8080)
         return manager
 
     @property
@@ -273,7 +272,7 @@ class PortForwardManager(object):
 
     def on_client_close(self):
         """M2M client closed."""
-        log.debug('m2m exited')
+        log.debug("m2m exited")
 
     def get_service_on_port(self, port):
         """Get the service on a numbered port."""
@@ -294,7 +293,7 @@ class PortForwardManager(object):
         log.debug("added port forward service '%s' on port %s", name, port)
 
     def open_service(self, service, route):
-        log.debug('opening service %s on %r', service, route)
+        log.debug("opening service %s on %r", service, route)
         node1, port1, node2, port2 = route
         self.open(port2, service)
 
@@ -323,5 +322,5 @@ class PortForwardManager(object):
         Connection(
             close_event=self.close_event,
             channel=self.m2m.m2m_client.get_channel(m2m_port),
-            host_port=('127.0.0.1', device_port)
+            host_port=("127.0.0.1", device_port),
         ).start()
