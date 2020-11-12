@@ -43,8 +43,8 @@ class PidWaitThread(Thread):
         sent_kill = False
         kill_time = 15  # Send a sigkill if process doesn't shut down (in seconds)
         while warnings:
-            # os.WNOHANG flags makes waitpid return immediately if the process is running
             time.sleep(2)
+            # os.WNOHANG flags makes waitpid return immediately if the process is running
             pid, exit_code = os.waitpid(self.pid, os.WNOHANG)
             if pid:
                 # The process has returned an exit code
