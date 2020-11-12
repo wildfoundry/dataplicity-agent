@@ -22,7 +22,7 @@ class PidWaitThread(Thread):
     def __init__(self, command, pid):
         self.command = command
         self.pid = pid
-        super(PidWaitThread, self).__init__()
+        super(PidWaitThread, self).__init__(daemon=True)
 
     def __str__(self):
         return '"%s" (pid=%i)' % (self.command, self.pid)
