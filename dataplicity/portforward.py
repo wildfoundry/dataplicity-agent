@@ -56,11 +56,12 @@ class Connection(threading.Thread):
         error_events = select.POLLERR | select.POLLHUP  #  Error or hang up
         events = readable_events | error_events
         poll = select.poll()
-        poll.register(self.socket.fileno(), events)
         try:
             # Connect to remote host
             if not self._connect():
                 return
+
+            poll.register(self.socket.fileno(), events)
 
             log.debug("entered recv loop")
             # Read all the data we can and write it to the channel
