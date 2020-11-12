@@ -22,7 +22,8 @@ class PidWaitThread(Thread):
     def __init__(self, command, pid):
         self.command = command
         self.pid = pid
-        super(PidWaitThread, self).__init__(daemon=True)
+        super(PidWaitThread, self).__init__()
+        self.daemon = True
 
     def __str__(self):
         return '"%s" (pid=%i)' % (self.command, self.pid)
@@ -64,6 +65,8 @@ class PidWaitThread(Thread):
                     sent_kill = True
                     log.debug("sending SIGKILL to process %s", self)
                     os.kill(self.pid, signal.SIGKILL)
+        else:
+            log.error("process %s will not die!", self)
 
 
 class RemoteProcess(proxy.Interceptor):
@@ -85,7 +88,7 @@ class RemoteProcess(proxy.Interceptor):
         return self._closed
 
     def __repr__(self):
-        return "RemoteProcess({!r}, {!r}, pid=%i)".format(
+        return "RemoteProcess({!r}, {!r}, pid={})".format(
             self.command, self.channel, self.pid
         )
 
