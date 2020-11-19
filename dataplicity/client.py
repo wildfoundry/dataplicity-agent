@@ -14,6 +14,7 @@ from . import device_meta
 from . import jsonrpc
 from .clockcheck import ClockCheckThread
 from .disk_tools import disk_usage
+from .event_loop import EventLoop
 from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
 from .tags import get_tag_list, TagError
@@ -35,6 +36,9 @@ class Client(object):
         self.exit_event = Event()
         self._init()
         self._tag_list = None
+        self.event_loop = EventLoop(self.exit_event)
+        self.event_loop.add_group("portforward", 10, 20)
+        self.event_loop.add_group("terminals", 3, 0)
 
     @classmethod
     def _read(cls, path):
@@ -71,6 +75,7 @@ class Client(object):
 
     def run_forever(self):
         """Run the client "forever"."""
+        self.event_loop.start()
         clock_check_thread = ClockCheckThread()
         clock_check_thread.start()
 

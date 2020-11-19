@@ -23,7 +23,8 @@ class EventTarget:
         Args:
             fd (Socket/file/file descriptor): A file descriptor or an object with fileno() (such as a socket or file)
             group (str): A group to use when queueing.
-            queue_size (int, optional): [description]. Defaults to 0.
+            queue_size (int, optional): Maximum targets that may be queued. Defaults to 0.
+            max_queue_time (int, optional): Maximum time in seconds that targets will be queued before expiring.
         """
         self.fd = fd
         self.group = group
@@ -123,14 +124,17 @@ class EventLoop(threading.Thread):
                 if group.full:
                     if len(group.queue) < group.max_queue_size:
                         group.queue.append(event_target)
+                        log.debug("enqueuing target %r", event_target)
                         return TARGET_QUEUED  # Target is queued for later
                     else:
                         event_target.on_queue_full()
+                        log.debug("no room for target %r", event_target)
                         return TARGET_QUEUE_FULL  # Queue full and target was not added
 
             self._targets[fileno] = event_target
             self._poll.register(fileno, READ_EVENTS | ERROR_EVENTS)
             self._groups[event_target.group].size += 1
+        log.debug("added target %r", event_target)
         return TARGET_ACCEPTED  # Target was added
 
     def flush_queue(self):
@@ -161,6 +165,7 @@ class EventLoop(threading.Thread):
             event_target (EventTarget): An event target object.
 
         """
+        log.debug("removing target %r", event_target)
         with self._lock:
             fileno = event_target.fileno()
             target = self._targets.pop(fileno, None)
@@ -170,7 +175,7 @@ class EventLoop(threading.Thread):
 
     def run(self):
         """Polls and dispatches events."""
-
+        log.info("event loop running")
         while not self.exit_event.is_set():
             try:
                 poll_result = self._poll.poll(1000)
@@ -203,4 +208,5 @@ class EventLoop(threading.Thread):
                         target.on_hang_up()
                     except Exception as error:
                         log.exception("error in %r on_hang_up")
+        log.info("event loop shut down")
 
