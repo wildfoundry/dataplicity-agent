@@ -16,18 +16,26 @@ import threading
 import weakref
 
 
-from .constants import CHUNK_SIZE
+from .counter import Counter, CounterMax
+from .constants import CHUNK_SIZE, LIMIT_PORTFORWARD
 
 
 log = logging.getLogger("pf")
+
+SERVER_BUSY = b"""\
+HTTP/1.x 503 Server busy
+
+The device is under heavy load and could not return a response.
+"""
 
 
 class Connection(threading.Thread):
     """Handles a single remote controlled TCP/IP connection."""
 
-    def __init__(self, close_event, channel, host_port):
+    def __init__(self, counter, close_event, channel, host_port):
         """Initialize the connection, set up callbacks."""
         super(Connection, self).__init__()
+        self.counter = counter
         self._close_event = close_event
         self.channel = channel
         self.host_port = host_port
@@ -96,12 +104,17 @@ class Connection(threading.Thread):
                         # m2m channel closing
                         self.close_event.set()
         finally:
-            speed = bytes_written / 1024.0 / (time() - self._start_time)
-            log.debug("left recv loop (read %s bytes) %0.1fKB/s ", bytes_written, speed)
-            # These close methods are a null operation if the objects are
-            # already closed
-            self.channel.close()
-            self._shutdown_read()
+            try:
+                speed = bytes_written / 1024.0 / (time() - self._start_time)
+                log.debug(
+                    "left recv loop (read %s bytes) %0.1fKB/s ", bytes_written, speed
+                )
+                # These close methods are a null operation if the objects are
+                # already closed
+                self.channel.close()
+                self._shutdown_read()
+            finally:
+                self.counter.decrement()
 
     def _shutdown_read(self):
         """Shutdown reading."""
@@ -231,13 +244,13 @@ class Service(object):
         """A tuple of (host, port) as a convenience for socket.connect."""
         return (self.host, self.port)
 
-    def connect(self, port_no):
+    def connect(self, counter, port_no):
         """Add a new connection."""
         self.m2m_port = port_no
         log.debug("new %r connection on port %s", self, port_no)
         with self._lock:
             channel = self.m2m.m2m_client.get_channel(port_no)
-            connection = Connection(self.close_event, channel, self.host_port,)
+            connection = Connection(counter, self.close_event, channel, self.host_port)
         connection.start()
 
 
@@ -245,6 +258,7 @@ class PortForwardManager(object):
     """Managed port forwarded services."""
 
     def __init__(self, client):
+        self.counter = Counter(LIMIT_PORTFORWARD)
         self._client = weakref.ref(client)
         self._services = {}
         self._ports = {}
@@ -308,7 +322,14 @@ class PortForwardManager(object):
             service = self.get_service(service)
         if service is None:
             return
-        service.connect(m2m_port)
+        try:
+            self.counter.increment()
+        except CounterMax:
+            channel = self.m2m.m2m_client.get_channel(m2m_port)
+            channel.write(SERVER_BUSY)
+            channel.close()
+        else:
+            service.connect(m2m_port)
 
     def redirect_port(self, m2m_port, device_port):
         # we need to store the reference to the Service somewhere so that
@@ -320,8 +341,16 @@ class PortForwardManager(object):
         # therefore, an easy way is to store these in a dict, so that the
         # lookup would be quick
         #
-        Connection(
-            close_event=self.close_event,
-            channel=self.m2m.m2m_client.get_channel(m2m_port),
-            host_port=("127.0.0.1", device_port),
-        ).start()
+        channel = self.m2m.m2m_client.get_channel(m2m_port)
+        try:
+            self.counter.increment()
+        except CounterMax:
+            channel.write(SERVER_BUSY)
+            channel.close()
+        else:
+            Connection(
+                self.counter,
+                close_event=self.close_event,
+                channel=channel,
+                host_port=("127.0.0.1", device_port),
+            ).start()
