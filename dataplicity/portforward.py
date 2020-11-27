@@ -16,26 +16,20 @@ import threading
 import weakref
 
 
-from .counter import Counter, CounterMax
-from .constants import CHUNK_SIZE, LIMIT_PORTFORWARD
+from .limiter import Limiter, LimitReached
+from .constants import CHUNK_SIZE, LIMIT_PORTFORWARD, SERVER_BUSY
 
 
 log = logging.getLogger("pf")
-
-SERVER_BUSY = b"""\
-HTTP/1.x 503 Server busy
-
-The device is under heavy load and could not return a response.
-"""
 
 
 class Connection(threading.Thread):
     """Handles a single remote controlled TCP/IP connection."""
 
-    def __init__(self, counter, close_event, channel, host_port):
+    def __init__(self, limiter, close_event, channel, host_port):
         """Initialize the connection, set up callbacks."""
         super(Connection, self).__init__()
-        self.counter = counter
+        self.limiter = limiter
         self._close_event = close_event
         self.channel = channel
         self.host_port = host_port
@@ -55,6 +49,13 @@ class Connection(threading.Thread):
         return self._close_event
 
     def run(self):
+        """Run the main loop, and decrement limiter."""
+        try:
+            self._run()
+        finally:
+            self.limiter.decrement()
+
+    def _run(self):
         """
         Main loop, connects to local server, reads data, and writes it to an
         m2m channel.
@@ -104,17 +105,13 @@ class Connection(threading.Thread):
                         # m2m channel closing
                         self.close_event.set()
         finally:
-            try:
-                speed = bytes_written / 1024.0 / (time() - self._start_time)
-                log.debug(
-                    "left recv loop (read %s bytes) %0.1fKB/s ", bytes_written, speed
-                )
-                # These close methods are a null operation if the objects are
-                # already closed
-                self.channel.close()
-                self._shutdown_read()
-            finally:
-                self.counter.decrement()
+
+            speed = bytes_written / 1024.0 / (time() - self._start_time)
+            log.debug("left recv loop (read %s bytes) %0.1fKB/s ", bytes_written, speed)
+            # These close methods are a null operation if the objects are
+            # already closed
+            self.channel.close()
+            self._shutdown_read()
 
     def _shutdown_read(self):
         """Shutdown reading."""
@@ -244,13 +241,13 @@ class Service(object):
         """A tuple of (host, port) as a convenience for socket.connect."""
         return (self.host, self.port)
 
-    def connect(self, counter, port_no):
+    def connect(self, limiter, port_no):
         """Add a new connection."""
         self.m2m_port = port_no
         log.debug("new %r connection on port %s", self, port_no)
         with self._lock:
             channel = self.m2m.m2m_client.get_channel(port_no)
-            connection = Connection(counter, self.close_event, channel, self.host_port)
+            connection = Connection(limiter, self.close_event, channel, self.host_port)
         connection.start()
 
 
@@ -258,7 +255,7 @@ class PortForwardManager(object):
     """Managed port forwarded services."""
 
     def __init__(self, client):
-        self.counter = Counter(LIMIT_PORTFORWARD)
+        self.limiter = Limiter(LIMIT_PORTFORWARD)
         self._client = weakref.ref(client)
         self._services = {}
         self._ports = {}
@@ -312,7 +309,7 @@ class PortForwardManager(object):
         node1, port1, node2, port2 = route
         self.open(port2, service)
 
-    def open(self, m2m_port, service=None, port=None):
+    def open(self, limiter, m2m_port, service=None, port=None):
         """Open a port forward service."""
         if service is None and port is None:
             raise ValueError("one of service or port is required")
@@ -323,15 +320,15 @@ class PortForwardManager(object):
         if service is None:
             return
         try:
-            self.counter.increment()
-        except CounterMax:
+            limiter.increment()
+        except LimitReached:
             channel = self.m2m.m2m_client.get_channel(m2m_port)
             channel.write(SERVER_BUSY)
             channel.close()
         else:
             service.connect(m2m_port)
 
-    def redirect_port(self, m2m_port, device_port):
+    def redirect_port(self, limiter, m2m_port, device_port):
         # we need to store the reference to the Service somewhere so that
         # when the Connection starts in thread it wouldn't loose the value
         # of service variable. However, we have to remember that there may
@@ -343,13 +340,13 @@ class PortForwardManager(object):
         #
         channel = self.m2m.m2m_client.get_channel(m2m_port)
         try:
-            self.counter.increment()
-        except CounterMax:
+            limiter.increment()
+        except LimitReached:
             channel.write(SERVER_BUSY)
             channel.close()
         else:
             Connection(
-                self.counter,
+                self.limiter,
                 close_event=self.close_event,
                 channel=channel,
                 host_port=("127.0.0.1", device_port),

@@ -5,6 +5,15 @@ from os import environ
 
 
 def get_environ_int(name, default):
+    """Get an integer from the environment.
+
+    Args:
+        name (str): environment variable name
+        default (int): Default if env var doesn't exist or not an integer
+
+    Returns:
+        int: Integer value of env var.
+    """
     try:
         value = int(environ.get(name, default))
     except ValueError:
@@ -25,5 +34,15 @@ MAX_TIME_SINCE_LAST_PACKET = 100.0  # seconds or None
 # issue with ssh over Porthole
 CHUNK_SIZE = 1024 * 1024
 
-LIMIT_PORTFORWARD = get_environ_int("DATAPLICITY_LIMIT_PORTFORWARD", 500)
-LIMIT_TERMINAL = get_environ_int("DATAPLICITY_LIMIT_PORTFORWARD", 100)
+# Maximum number of services (port forward/commands/file etc)
+LIMIT_SERVICES = get_environ_int("DATAPLICITY_LIMIT_SERVICES", 500)
+
+# Maximum number of terminals (separate pool from services)
+LIMIT_TERMINAL = get_environ_int("DATAPLICITY_LIMIT_TERMINAL", 100)
+
+#  Server bust HTTP response
+SERVER_BUSY = b"""HTTP/1.x 503 Server busy\r\n\r
+The device is under heavy load and could not return a response.
+
+Try increasing DATAPLICITY_LIMIT_SERVICES
+"""

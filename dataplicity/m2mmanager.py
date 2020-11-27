@@ -9,6 +9,7 @@ import threading
 
 from . import constants
 from .compat import PY3
+from .limiter import Limiter, LimitReached
 from .m2m import WSClient, EchoService
 from .m2m.fileservice import FileService
 from .m2m.commandservice import CommandService
@@ -37,8 +38,9 @@ class Terminal(object):
             process for process in self.processes if not process.is_closed
         ]
 
-    def launch(self, channel, size=None):
+    def launch(self, limiter, channel, size=None):
         """Launch a terminal instance."""
+
         if size is None:
             size = [80, 24]
         self._prune_closed()
@@ -46,7 +48,12 @@ class Terminal(object):
         remote_process = None
         try:
             remote_process = RemoteProcess(
-                self.command, channel, user=self.user, group=self.group, size=size
+                limiter,
+                self.command,
+                channel,
+                user=self.user,
+                group=self.group,
+                size=size,
             )
         except:
             log.exception("error launching terminal process '%s'", self.command)
@@ -56,10 +63,16 @@ class Terminal(object):
                 except:
                     pass
         else:
-            self.processes.append(remote_process)
-            process_thread = threading.Thread(target=remote_process.run)
-            process_thread.start()
-            log.info("launched remote process %r over %r", self, channel)
+            try:
+                limiter.increment()
+            except LimitReached:
+                channel.write(b"Too many terminals\n")
+                log.info("unable to launch remote process; too many terminals")
+            else:
+                self.processes.append(remote_process)
+                process_thread = threading.Thread(target=remote_process.run)
+                process_thread.start()
+                log.info("launched remote process %r over %r", self, channel)
 
     def close(self):
         self._prune_closed()
@@ -84,6 +97,8 @@ class M2MManager(object):
         self.terminals = {}
         self.notified_identity = None
         self.m2m_client = WSClient(self, url)
+        self.service_limiter = Limiter(constants.LIMIT_SERVICES)
+        self.terminal_limiter = Limiter(constants.LIMIT_TERMINAL)
 
     @classmethod
     def init(cls, client, m2m_url=None):
@@ -183,11 +198,14 @@ class M2MManager(object):
         if terminal is None:
             log.warning("no terminal called '%s'", name)
             return
-        terminal.launch(self.m2m_client.get_channel(port), size=size)
+        terminal.launch(
+            self.terminal_limiter, self.m2m_client.get_channel(port), size=size
+        )
 
     def open_echo_service(self, port):
         """Open an echo service (ping)."""
         log.debug("opening echo service on m2m port %s", port)
+        # Doesn't use threads, so doesn't need limiter
         EchoService(self.m2m_client.get_channel(port))
 
     def open_portforward(self, service, route):
@@ -206,9 +224,9 @@ class M2MManager(object):
     def open_file_service(self, port, path):
         """Open a file service, to send a file over a port."""
         channel = self.m2m_client.get_channel(port)
-        FileService(channel, path)
+        FileService(self.service_limiter, channel, path)
 
     def open_command_service(self, port, command):
         """Open a service that runs a command and sends the stdout over m2m."""
         channel = self.m2m_client.get_channel(port)
-        CommandService(channel, command)
+        CommandService(self.service_limiter, channel, command)
