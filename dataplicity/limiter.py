@@ -4,8 +4,8 @@ A threadsafe object to enforce limits.
 Similar in purpose to a Semaphore, but simpler because we never want to block. 
 
 """
-
-from threading import Lock
+from contextlib import contextmanager
+from threading import RLock
 
 
 class LimiterError(Exception):
@@ -16,13 +16,32 @@ class LimitReached(Exception):
     """Count has reached the maximum"""
 
 
+@contextmanager
+def limiter_context(limiter):
+    # Increment the counter
+    limiter.increment()
+    with limiter._lock:
+        try:
+            # run setup code, while locked
+            yield
+        except Exception:
+            # Decrement counter if any errors
+            limiter.decrement()
+            raise
+
+
 class Limiter(object):
     """A thread safe counter."""
 
-    def __init__(self, limit):
-        self._lock = Lock()  # Doesn't need to be re-entrant
+    def __init__(self, limit, name):
+        self._lock = RLock()
         self._limit = limit
+        self.name = name
         self._value = 0
+
+    def __enter__(self):
+        """Countext manager to increment limiter and decrement on error."""
+        return limiter_context(self)
 
     def increment(self):
         """Increment the count.
@@ -31,7 +50,9 @@ class Limiter(object):
         """
         with self._lock:
             if self._value >= self._limit:
-                raise LimitReached("Max count reached")
+                raise LimitReached(
+                    "{} limit ({}) reached".format(self.name, self._limit)
+                )
             self._value += 1
 
     def decrement(self):

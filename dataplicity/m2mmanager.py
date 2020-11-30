@@ -63,10 +63,16 @@ class Terminal(object):
                 except:
                     pass
         else:
-            self.processes.append(remote_process)
-            process_thread = threading.Thread(target=remote_process.run)
-            process_thread.start()
-            log.info("launched remote process %r over %r", self, channel)
+            try:
+                with limiter:
+                    self.processes.append(remote_process)
+                    process_thread = threading.Thread(target=remote_process.run)
+                    process_thread.start()
+                    log.info("launched remote process %r over %r", self, channel)
+            except Exception as error:
+                log.info("unable to launch remote process; %s", error)
+                channel.write("Failed to launch remote process\n")
+                channel.close()
 
     def close(self):
         self._prune_closed()

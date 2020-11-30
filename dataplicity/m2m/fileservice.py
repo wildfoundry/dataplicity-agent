@@ -35,8 +35,15 @@ class FileService(threading.Thread):
     def __init__(self, limiter, channel, path):
         self.limiter = limiter
         self._repr = "FileService({!r}, {!r})".format(channel, path)
-        super(FileService, self).__init__(args=(channel, path), target=self.run_service)
-        self.start()
+        try:
+            with limiter:
+                super(FileService, self).__init__(
+                    args=(channel, path), target=self.run_service
+                )
+                self.start()
+        except LimitReached:
+            channel.write(SERVER_BUSY)
+            channel.close()
 
     def __repr__(self):
         return self._repr
@@ -56,19 +63,13 @@ class FileService(threading.Thread):
     def run_service(self, channel, path):
         """Run the thread and log exceptions."""
         try:
-            self.limiter.increment()
-        except LimitReached:
-            channel.write(SERVER_BUSY)
-            channel.close()
-        else:
             try:
-                try:
-                    self._run_service(channel, path)
-                except Exception:
-                    log.exception("error running %r", self)
-                    self.send_error(channel, "error", "internal error, see agent logs")
-            finally:
-                self.limiter.decrement()
+                self._run_service(channel, path)
+            except Exception:
+                log.exception("error running %r", self)
+                self.send_error(channel, "error", "internal error, see agent logs")
+        finally:
+            self.limiter.decrement()
 
     def _run_service(self, channel, path):
         """Send a file over a port."""

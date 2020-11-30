@@ -31,10 +31,16 @@ class CommandService(threading.Thread):
     def __init__(self, limiter, channel, command):
         self.limiter = limiter
         self._repr = "CommandService({!r}, {!r})".format(channel, command)
-        super(CommandService, self).__init__(
-            args=(channel, command), target=self.run_service
-        )
-        self.start()
+        try:
+            with limiter:
+                super(CommandService, self).__init__(
+                    args=(channel, command), target=self.run_service
+                )
+                self.start()
+        except Exception as error:
+            log.warning("unable to launch %r; %s", self, error)
+            self.send_error(channel, "error", str(error))
+            channel.close()
 
     def __repr__(self):
         return self._repr
@@ -48,13 +54,6 @@ class CommandService(threading.Thread):
 
     def run_service(self, channel, command):
         """Run the thread and log exceptions."""
-        try:
-            self.limiter.increment()
-        except LimitReached:
-            log.warning("unable to launch %r; service limit reached", self)
-            self.send_error(channel, "error", "service limit reached")
-            channel.close()
-            return
         try:
             try:
                 self._run_service(channel, command)
@@ -95,7 +94,6 @@ class CommandService(threading.Thread):
                             if not chunk:
                                 log.debug("%r EOF", self)
                                 break
-
                             channel.write(chunk)
                             bytes_sent += len(chunk)
                         else:
