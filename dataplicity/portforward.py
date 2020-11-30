@@ -17,7 +17,7 @@ import weakref
 
 
 from .limiter import Limiter, LimitReached
-from .constants import CHUNK_SIZE, LIMIT_PORTFORWARD, SERVER_BUSY
+from .constants import CHUNK_SIZE, LIMIT_TERMINALS, SERVER_BUSY
 
 
 log = logging.getLogger("pf")
@@ -51,15 +51,9 @@ class Connection(threading.Thread):
     def run(self):
         """Run the main loop, and decrement limiter."""
         try:
-            self.limiter.increment()
-        except LimitReached:
-            self.channel.write(SERVER_BUSY)
-            self.channel.close()
-        else:
-            try:
-                self._run()
-            finally:
-                self.limiter.decrement()
+            self._run()
+        finally:
+            self.limiter.decrement()
 
     def _run(self):
         """
@@ -153,7 +147,14 @@ class Connection(threading.Thread):
     def connect(self):
         """Start thread, and connect to local server."""
         # Connect may block, so do it in a thread
-        self.start()
+
+        try:
+            with self.limiter():
+                self.start()
+        except Exception as error:
+            log.warning("unable to start portforard thread; %r", error)
+            self.channel.write(SERVER_BUSY)
+            self.channel.close()
 
     def _connect(self):
         """Connect to a local server, return True on success."""
@@ -250,18 +251,25 @@ class Service(object):
     def connect(self, limiter, port_no):
         """Add a new connection."""
         self.m2m_port = port_no
+        channel = self.m2m.m2m_client.get_channel(port_no)
         log.debug("new %r connection on port %s", self, port_no)
-        with self._lock:
-            channel = self.m2m.m2m_client.get_channel(port_no)
-            connection = Connection(limiter, self.close_event, channel, self.host_port)
-        connection.start()
+        try:
+            with limiter():
+                with self._lock:
+                    connection = Connection(
+                        limiter, self.close_event, channel, self.host_port
+                    )
+                connection.start()
+        except Exception as error:
+            channel.write(SERVER_BUSY)
+            channel.close()
+            log.warning("failed to connect %r; %s", self, error)
 
 
 class PortForwardManager(object):
     """Managed port forwarded services."""
 
     def __init__(self, client):
-        self.limiter = Limiter(LIMIT_PORTFORWARD)
         self._client = weakref.ref(client)
         self._services = {}
         self._ports = {}
@@ -310,10 +318,10 @@ class PortForwardManager(object):
         self._ports[port] = name
         log.debug("added port forward service '%s' on port %s", name, port)
 
-    def open_service(self, service, route):
+    def open_service(self, limiter, service, route):
         log.debug("opening service %s on %r", service, route)
         node1, port1, node2, port2 = route
-        self.open(port2, service)
+        self.open(limiter, port2, service)
 
     def open(self, limiter, m2m_port, service=None, port=None):
         """Open a port forward service."""
@@ -325,7 +333,7 @@ class PortForwardManager(object):
             service = self.get_service(service)
         if service is None:
             return
-        service.connect(m2m_port)
+        service.connect(limiter, m2m_port)
 
     def redirect_port(self, limiter, m2m_port, device_port):
         # we need to store the reference to the Service somewhere so that
@@ -338,9 +346,15 @@ class PortForwardManager(object):
         # lookup would be quick
         #
         channel = self.m2m.m2m_client.get_channel(m2m_port)
-        Connection(
-            self.limiter,
-            close_event=self.close_event,
-            channel=channel,
-            host_port=("127.0.0.1", device_port),
-        ).start()
+        try:
+            with limiter():
+                Connection(
+                    limiter,
+                    close_event=self.close_event,
+                    channel=channel,
+                    host_port=("127.0.0.1", device_port),
+                ).start()
+        except Exception as error:
+            log.warning("unable to start portforard thread; %r", error)
+            channel.write(SERVER_BUSY)
+            channel.close()

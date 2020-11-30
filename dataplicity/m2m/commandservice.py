@@ -32,7 +32,7 @@ class CommandService(threading.Thread):
         self.limiter = limiter
         self._repr = "CommandService({!r}, {!r})".format(channel, command)
         try:
-            with limiter:
+            with limiter():
                 super(CommandService, self).__init__(
                     args=(channel, command), target=self.run_service
                 )

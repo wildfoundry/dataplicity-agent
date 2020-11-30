@@ -36,7 +36,7 @@ class FileService(threading.Thread):
         self.limiter = limiter
         self._repr = "FileService({!r}, {!r})".format(channel, path)
         try:
-            with limiter:
+            with limiter():
                 super(FileService, self).__init__(
                     args=(channel, path), target=self.run_service
                 )

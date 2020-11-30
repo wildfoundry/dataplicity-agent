@@ -64,14 +64,14 @@ class Terminal(object):
                     pass
         else:
             try:
-                with limiter:
+                with limiter():
                     self.processes.append(remote_process)
                     process_thread = threading.Thread(target=remote_process.run)
                     process_thread.start()
                     log.info("launched remote process %r over %r", self, channel)
             except Exception as error:
                 log.info("unable to launch remote process; %s", error)
-                channel.write("Failed to launch remote process\n")
+                channel.write(b"Failed to launch remote process\n")
                 channel.close()
 
     def close(self):
@@ -97,8 +97,8 @@ class M2MManager(object):
         self.terminals = {}
         self.notified_identity = None
         self.m2m_client = WSClient(self, url)
-        self.service_limiter = Limiter(constants.LIMIT_SERVICES)
-        self.terminal_limiter = Limiter(constants.LIMIT_TERMINAL)
+        self.services_limiter = Limiter("services", constants.LIMIT_SERVICES)
+        self.terminals_limiter = Limiter("terminals", constants.LIMIT_TERMINALS)
 
     @classmethod
     def init(cls, client, m2m_url=None):
@@ -199,7 +199,7 @@ class M2MManager(object):
             log.warning("no terminal called '%s'", name)
             return
         terminal.launch(
-            self.terminal_limiter, self.m2m_client.get_channel(port), size=size
+            self.terminals_limiter, self.m2m_client.get_channel(port), size=size
         )
 
     def open_echo_service(self, port):
@@ -210,7 +210,7 @@ class M2MManager(object):
 
     def open_portforward(self, service, route):
         """Open a port forward service."""
-        self.client.port_forward.open_service(service, route)
+        self.client.port_forward.open_service(self.services_limiter, service, route)
 
     def reboot(self):
         """Initiate a reboot."""
@@ -224,9 +224,9 @@ class M2MManager(object):
     def open_file_service(self, port, path):
         """Open a file service, to send a file over a port."""
         channel = self.m2m_client.get_channel(port)
-        FileService(self.service_limiter, channel, path)
+        FileService(self.services_limiter, channel, path)
 
     def open_command_service(self, port, command):
         """Open a service that runs a command and sends the stdout over m2m."""
         channel = self.m2m_client.get_channel(port)
-        CommandService(self.service_limiter, channel, command)
+        CommandService(self.services_limiter, channel, command)

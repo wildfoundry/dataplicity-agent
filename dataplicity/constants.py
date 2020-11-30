@@ -18,6 +18,7 @@ def get_environ_int(name, default):
         value = int(environ.get(name, default))
     except ValueError:
         return default
+    return value
 
 
 CONF_PATH = "/etc/dataplicity/dataplicity.conf"
@@ -35,14 +36,16 @@ MAX_TIME_SINCE_LAST_PACKET = 100.0  # seconds or None
 CHUNK_SIZE = 1024 * 1024
 
 # Maximum number of services (port forward/commands/file etc)
-LIMIT_SERVICES = get_environ_int("DATAPLICITY_LIMIT_SERVICES", 500)
+LIMIT_SERVICES = get_environ_int("DATAPLICITY_LIMIT_SERVICES", 10)
 
 # Maximum number of terminals (separate pool from services)
-LIMIT_TERMINAL = get_environ_int("DATAPLICITY_LIMIT_TERMINAL", 100)
+LIMIT_TERMINALS = get_environ_int("DATAPLICITY_LIMIT_TERMINALS", 100)
 
-#  Server bust HTTP response
-SERVER_BUSY = b"""HTTP/1.x 503 Server busy\r\n\r
-The device is under heavy load and could not return a response.
+# Server busy HTTP response
+SERVER_BUSY = b"""HTTP/1.1 503 Device Busy\r\n\r\n
+<h1>503 - Server busy</h1>
 
-Try increasing DATAPLICITY_LIMIT_SERVICES
+<p>The device is under heavy load and could not return a response.</p>
+
+<p>Try increasing <tt>DATAPLICITY_LIMIT_SERVICES</tt></p>
 """
