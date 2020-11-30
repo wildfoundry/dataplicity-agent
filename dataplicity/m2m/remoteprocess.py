@@ -11,6 +11,7 @@ import shlex
 import time
 from threading import Thread
 
+from ..limiter import LimitReached
 from . import proxy
 
 log = logging.getLogger("m2m")
@@ -95,9 +96,16 @@ class RemoteProcess(proxy.Interceptor):
 
     def run(self):
         try:
-            self.spawn(shlex.split(self.command))
-        finally:
-            self.limiter.decrement()
+            self.limiter.increment()
+        except LimitReached:
+            log.info("unable to launch remote process; too many terminals")
+            self.channel.write("Too many terminals open\n")
+            self.channel.close()
+        else:
+            try:
+                self.spawn(shlex.split(self.command))
+            finally:
+                self.limiter.decrement()
 
     def on_data(self, data):
         try:

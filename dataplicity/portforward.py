@@ -51,9 +51,15 @@ class Connection(threading.Thread):
     def run(self):
         """Run the main loop, and decrement limiter."""
         try:
-            self._run()
-        finally:
-            self.limiter.decrement()
+            self.limiter.increment()
+        except LimitReached:
+            self.channel.write(SERVER_BUSY)
+            self.channel.close()
+        else:
+            try:
+                self._run()
+            finally:
+                self.limiter.decrement()
 
     def _run(self):
         """
@@ -319,14 +325,7 @@ class PortForwardManager(object):
             service = self.get_service(service)
         if service is None:
             return
-        try:
-            limiter.increment()
-        except LimitReached:
-            channel = self.m2m.m2m_client.get_channel(m2m_port)
-            channel.write(SERVER_BUSY)
-            channel.close()
-        else:
-            service.connect(m2m_port)
+        service.connect(m2m_port)
 
     def redirect_port(self, limiter, m2m_port, device_port):
         # we need to store the reference to the Service somewhere so that
@@ -339,15 +338,9 @@ class PortForwardManager(object):
         # lookup would be quick
         #
         channel = self.m2m.m2m_client.get_channel(m2m_port)
-        try:
-            limiter.increment()
-        except LimitReached:
-            channel.write(SERVER_BUSY)
-            channel.close()
-        else:
-            Connection(
-                self.limiter,
-                close_event=self.close_event,
-                channel=channel,
-                host_port=("127.0.0.1", device_port),
-            ).start()
+        Connection(
+            self.limiter,
+            close_event=self.close_event,
+            channel=channel,
+            host_port=("127.0.0.1", device_port),
+        ).start()

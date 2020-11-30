@@ -34,14 +34,7 @@ class CommandService(threading.Thread):
         super(CommandService, self).__init__(
             args=(channel, command), target=self.run_service
         )
-        try:
-            limiter.increment()
-        except LimitReached:
-            log.warning("unable to launch %r; service limit reached", self)
-            self.send_error(channel, "error", "service limit reached")
-            channel.close()
-        else:
-            self.start()
+        self.start()
 
     def __repr__(self):
         return self._repr
@@ -55,6 +48,13 @@ class CommandService(threading.Thread):
 
     def run_service(self, channel, command):
         """Run the thread and log exceptions."""
+        try:
+            self.limiter.increment()
+        except LimitReached:
+            log.warning("unable to launch %r; service limit reached", self)
+            self.send_error(channel, "error", "service limit reached")
+            channel.close()
+            return
         try:
             try:
                 self._run_service(channel, command)
@@ -73,26 +73,39 @@ class CommandService(threading.Thread):
         bytes_sent = 0
         stdout_fh = process.stdout.fileno()
         stderr_fh = process.stderr.fileno()
+
+        readable_events = select.POLLIN | select.POLLPRI  # Data in , priority data in
+        error_events = select.POLLERR | select.POLLHUP  #  Error or hang up
+        events = readable_events | error_events
+        poll = select.poll()
+        poll.register(stdout_fh, events)
+        poll.register(stderr_fh, events)
         try:
             while True:
-                readable, _, _ = select.select([stdout_fh, stderr_fh], [], [], 0.5)
+                try:
+                    poll_result = poll.poll(0.5 * 1000)
+                except Exception as error:
+                    log.warning("error in commandservice.py poll.poll; %s", error)
+                    break
+
+                for _file_descriptor, event_mask in poll_result:
+                    if event_mask & readable_events:
+                        if _file_descriptor == stdout_fh:
+                            chunk = os.read(stdout_fh, CHUNK_SIZE)
+                            if not chunk:
+                                log.debug("%r EOF", self)
+                                break
+
+                            channel.write(chunk)
+                            bytes_sent += len(chunk)
+                        else:
+                            chunk = os.read(stderr_fh, CHUNK_SIZE)
+                            log.debug("%r [stderr] %r", self, chunk)
+                    if event_mask & error_events:
+                        break
                 if channel.is_closed:
                     log.debug("%r channel closed", self)
                     break
-                if stdout_fh in readable:
-                    # Send stdout over m2m
-                    chunk = os.read(stdout_fh, CHUNK_SIZE)
-                    if not chunk:
-                        log.debug("%r EOF", self)
-                        break
-                    channel.write(chunk)
-                    bytes_sent += len(chunk)
-                if stderr_fh in readable:
-                    # Log stderr
-                    chunk = os.read(stderr_fh, CHUNK_SIZE)
-                    log.debug("%r [stderr] %r", self, chunk)
-            else:
-                log.debug("%r complete", self)
 
         except WebSocketError as websocket_error:
             log.warning("%r websocket error (%s)", self, websocket_error)

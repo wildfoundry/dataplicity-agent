@@ -63,16 +63,10 @@ class Terminal(object):
                 except:
                     pass
         else:
-            try:
-                limiter.increment()
-            except LimitReached:
-                channel.write(b"Too many terminals\n")
-                log.info("unable to launch remote process; too many terminals")
-            else:
-                self.processes.append(remote_process)
-                process_thread = threading.Thread(target=remote_process.run)
-                process_thread.start()
-                log.info("launched remote process %r over %r", self, channel)
+            self.processes.append(remote_process)
+            process_thread = threading.Thread(target=remote_process.run)
+            process_thread.start()
+            log.info("launched remote process %r over %r", self, channel)
 
     def close(self):
         self._prune_closed()
