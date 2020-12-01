@@ -21,6 +21,7 @@ class LimitReached(Exception):
 
 @contextmanager
 def limiter_context(limiter):
+    """Context manager which increments the limiter, and decrements if there is an error."""
     # Increment the counter
     limiter.increment()
     with limiter._lock:
@@ -34,9 +35,16 @@ def limiter_context(limiter):
 
 
 class Limiter(object):
-    """A thread safe counter."""
+    """A thread safe counter with an upper limit."""
 
     def __init__(self, name, limit):
+        """Create limiter object.
+
+        Args:
+            name (str): Name of limiter (used in error messages)
+            limit (int): Upper limit.
+        """
+        assert limit > 0
         self._lock = RLock()
         self.name = name
         self._limit = limit
