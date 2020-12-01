@@ -80,7 +80,8 @@ class CommandService(threading.Thread):
         poll.register(stdout_fh, events)
         poll.register(stderr_fh, events)
         try:
-            while True:
+            more_data = True
+            while more_data:
                 try:
                     poll_result = poll.poll(0.5 * 1000)
                 except Exception as error:
@@ -92,6 +93,7 @@ class CommandService(threading.Thread):
                         if _file_descriptor == stdout_fh:
                             chunk = os.read(stdout_fh, CHUNK_SIZE)
                             if not chunk:
+                                more_data = False
                                 log.debug("%r EOF", self)
                                 break
                             channel.write(chunk)
