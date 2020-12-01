@@ -36,7 +36,7 @@ MAX_TIME_SINCE_LAST_PACKET = 100.0  # seconds or None
 CHUNK_SIZE = 1024 * 1024
 
 # Maximum number of services (port forward/commands/file etc)
-LIMIT_SERVICES = get_environ_int("DATAPLICITY_LIMIT_SERVICES", 10)
+LIMIT_SERVICES = get_environ_int("DATAPLICITY_LIMIT_SERVICES", 500)
 
 # Maximum number of terminals (separate pool from services)
 LIMIT_TERMINALS = get_environ_int("DATAPLICITY_LIMIT_TERMINALS", 100)
