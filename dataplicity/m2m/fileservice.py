@@ -41,7 +41,9 @@ class FileService(threading.Thread):
                     args=(channel, path), target=self.run_service
                 )
                 self.start()
-        except LimitReached:
+        except Exception as error:
+            # Could be limit reached, or out of threads
+            log.warning("failed to create file service; %r", error)
             channel.write(SERVER_BUSY)
             channel.close()
 
