@@ -137,8 +137,8 @@ class RemoteProcess(proxy.Interceptor):
             try:
                 wait_thread = PidWaitThread(self.command, self.pid)
                 wait_thread.start()
-            except Exception:
-                log.warning("pid wait thread failed to launch")
+            except Exception as error:
+                log.warning("pid wait thread failed to launch; %s", error)
         self._closed = True
 
     def __enter__(self):

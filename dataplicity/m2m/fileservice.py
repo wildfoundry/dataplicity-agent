@@ -43,7 +43,7 @@ class FileService(threading.Thread):
                 self.start()
         except Exception as error:
             # Could be limit reached, or out of threads
-            log.warning("failed to create file service; %r", error)
+            log.warning("failed to create file service; %s", error)
             channel.write(SERVER_BUSY)
             channel.close()
 
