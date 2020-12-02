@@ -51,6 +51,7 @@ class Connection(threading.Thread):
         try:
             self._run()
         finally:
+            # Ensure decrement is called if _run throws an exception
             self.limiter.decrement()
 
     def _run(self):
