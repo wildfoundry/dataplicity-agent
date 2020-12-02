@@ -15,8 +15,7 @@ import socket
 import threading
 import weakref
 
-
-from .constants import CHUNK_SIZE
+from .constants import CHUNK_SIZE, SERVER_BUSY
 
 
 log = logging.getLogger("pf")
@@ -25,9 +24,10 @@ log = logging.getLogger("pf")
 class Connection(threading.Thread):
     """Handles a single remote controlled TCP/IP connection."""
 
-    def __init__(self, close_event, channel, host_port):
+    def __init__(self, limiter, close_event, channel, host_port):
         """Initialize the connection, set up callbacks."""
         super(Connection, self).__init__()
+        self.limiter = limiter
         self._close_event = close_event
         self.channel = channel
         self.host_port = host_port
@@ -47,6 +47,14 @@ class Connection(threading.Thread):
         return self._close_event
 
     def run(self):
+        """Run the main loop, and decrement limiter."""
+        try:
+            self._run()
+        finally:
+            # Ensure decrement is called if _run throws an exception
+            self.limiter.decrement()
+
+    def _run(self):
         """
         Main loop, connects to local server, reads data, and writes it to an
         m2m channel.
@@ -96,6 +104,7 @@ class Connection(threading.Thread):
                         # m2m channel closing
                         self.close_event.set()
         finally:
+
             speed = bytes_written / 1024.0 / (time() - self._start_time)
             log.debug("left recv loop (read %s bytes) %0.1fKB/s ", bytes_written, speed)
             # These close methods are a null operation if the objects are
@@ -137,7 +146,14 @@ class Connection(threading.Thread):
     def connect(self):
         """Start thread, and connect to local server."""
         # Connect may block, so do it in a thread
-        self.start()
+
+        try:
+            with self.limiter():
+                self.start()
+        except Exception as error:
+            log.warning("unable to start portforard thread; %r", error)
+            self.channel.write(SERVER_BUSY)
+            self.channel.close()
 
     def _connect(self):
         """Connect to a local server, return True on success."""
@@ -231,14 +247,22 @@ class Service(object):
         """A tuple of (host, port) as a convenience for socket.connect."""
         return (self.host, self.port)
 
-    def connect(self, port_no):
+    def connect(self, limiter, port_no):
         """Add a new connection."""
         self.m2m_port = port_no
+        channel = self.m2m.m2m_client.get_channel(port_no)
         log.debug("new %r connection on port %s", self, port_no)
-        with self._lock:
-            channel = self.m2m.m2m_client.get_channel(port_no)
-            connection = Connection(self.close_event, channel, self.host_port,)
-        connection.start()
+        try:
+            with limiter():
+                with self._lock:
+                    connection = Connection(
+                        limiter, self.close_event, channel, self.host_port
+                    )
+                connection.start()
+        except Exception as error:
+            channel.write(SERVER_BUSY)
+            channel.close()
+            log.warning("failed to connect %r; %s", self, error)
 
 
 class PortForwardManager(object):
@@ -293,12 +317,12 @@ class PortForwardManager(object):
         self._ports[port] = name
         log.debug("added port forward service '%s' on port %s", name, port)
 
-    def open_service(self, service, route):
+    def open_service(self, limiter, service, route):
         log.debug("opening service %s on %r", service, route)
         node1, port1, node2, port2 = route
-        self.open(port2, service)
+        self.open(limiter, port2, service)
 
-    def open(self, m2m_port, service=None, port=None):
+    def open(self, limiter, m2m_port, service=None, port=None):
         """Open a port forward service."""
         if service is None and port is None:
             raise ValueError("one of service or port is required")
@@ -308,9 +332,9 @@ class PortForwardManager(object):
             service = self.get_service(service)
         if service is None:
             return
-        service.connect(m2m_port)
+        service.connect(limiter, m2m_port)
 
-    def redirect_port(self, m2m_port, device_port):
+    def redirect_port(self, limiter, m2m_port, device_port):
         # we need to store the reference to the Service somewhere so that
         # when the Connection starts in thread it wouldn't loose the value
         # of service variable. However, we have to remember that there may
@@ -320,8 +344,16 @@ class PortForwardManager(object):
         # therefore, an easy way is to store these in a dict, so that the
         # lookup would be quick
         #
-        Connection(
-            close_event=self.close_event,
-            channel=self.m2m.m2m_client.get_channel(m2m_port),
-            host_port=("127.0.0.1", device_port),
-        ).start()
+        channel = self.m2m.m2m_client.get_channel(m2m_port)
+        try:
+            with limiter():
+                Connection(
+                    limiter,
+                    close_event=self.close_event,
+                    channel=channel,
+                    host_port=("127.0.0.1", device_port),
+                ).start()
+        except Exception as error:
+            log.warning("unable to start portforard thread; %r", error)
+            channel.write(SERVER_BUSY)
+            channel.close()

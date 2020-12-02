@@ -72,7 +72,8 @@ class PidWaitThread(Thread):
 class RemoteProcess(proxy.Interceptor):
     """Process managed remotely over m2m."""
 
-    def __init__(self, command, channel, user=None, group=None, size=None):
+    def __init__(self, limiter, command, channel, user=None, group=None, size=None):
+        self.limiter = limiter
         self.command = command
         self.channel = channel
         self.size = size
@@ -93,7 +94,10 @@ class RemoteProcess(proxy.Interceptor):
         )
 
     def run(self):
-        self.spawn(shlex.split(self.command))
+        try:
+            self.spawn(shlex.split(self.command))
+        finally:
+            self.limiter.decrement()
 
     def on_data(self, data):
         try:
@@ -129,8 +133,11 @@ class RemoteProcess(proxy.Interceptor):
         if not self._closed and self.pid is not None:
             log.debug("sending SIGHUP to %r", self)
             os.kill(self.pid, signal.SIGHUP)
-            wait_thread = PidWaitThread(self.command, self.pid)
-            wait_thread.start()
+            try:
+                wait_thread = PidWaitThread(self.command, self.pid)
+                wait_thread.start()
+            except Exception as error:
+                log.warning("pid wait thread failed to launch; %s", error)
         self._closed = True
 
     def __enter__(self):
