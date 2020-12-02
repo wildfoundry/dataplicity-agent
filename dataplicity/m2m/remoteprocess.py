@@ -11,7 +11,6 @@ import shlex
 import time
 from threading import Thread
 
-from ..limiter import LimitReached
 from . import proxy
 
 log = logging.getLogger("m2m")
