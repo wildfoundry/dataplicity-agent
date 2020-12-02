@@ -15,9 +15,7 @@ import socket
 import threading
 import weakref
 
-
-from .limiter import Limiter, LimitReached
-from .constants import CHUNK_SIZE, LIMIT_TERMINALS, SERVER_BUSY
+from .constants import CHUNK_SIZE, SERVER_BUSY
 
 
 log = logging.getLogger("pf")

@@ -9,7 +9,7 @@ import threading
 
 from . import constants
 from .compat import PY3
-from .limiter import Limiter, LimitReached
+from .limiter import Limiter
 from .m2m import WSClient, EchoService
 from .m2m.fileservice import FileService
 from .m2m.commandservice import CommandService
