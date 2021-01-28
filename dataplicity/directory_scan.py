@@ -5,13 +5,24 @@ import time
 
 import typing
 
+
 if typing.TYPE_CHECKING:
-    from typing import Dict, List, Set, Tuple, Iterable
+    from typing import Dict, List, Set, Tuple, TypedDict, Iterable
+
+    FileDict = TypedDict("FileDict", {"name": str, "size": int})
+    DirectoryDict = TypedDict(
+        "DirectoryDict", {"files": List[FileDict], "dirs": List[str]}
+    )
+    ScanResult = TypedDict(
+        "ScanResult",
+        {"root": str, "time": float, "directories": Dict[str, DirectoryDict]},
+    )
+
 log = logging.getLogger("agent")
 
 
 def directory_scan(root_path):
-    # type: (str) -> dict
+    # type: (str) -> ScanResult
     """Scan and serialize directory structure.
 
     Uses scandir to do this quite efficiently (without code recursion). Recursive links 
@@ -46,10 +57,10 @@ def directory_scan(root_path):
     root_path = os.path.abspath(root_path)
     stack = []  # type: List[Tuple[str, Iterable[os.DirEntry]]]
 
-    directories = {}  # type: Dict[str, Dict]
+    directories = {}  # type: Dict[str, DirectoryDict]
     visited_directories = set()  # type: Set[int]
 
-    def push_directory(path,):
+    def push_directory(path):
         # type: (str) -> None
         """Push a new directory on to the stack."""
         scan_path = os.path.join(root_path, path)
@@ -71,18 +82,27 @@ def directory_scan(root_path):
             stack.pop()
         else:
             if dir_entry.name.startswith("."):
+                # Exclude hidden files and directories
                 continue
             if dir_entry.is_dir():
                 inode = dir_entry.inode()
-                if inode not in visited_directories:
-                    directories[path]["dirs"].append(dir_entry.name)
-                    visited_directories.add(inode)
-                    push_directory(path + "/" + dir_entry.name)
+                if inode in visited_directories:
+                    # We have visited this directory before, we must have a recursive link
+                    continue
+                directories[path]["dirs"].append(dir_entry.name)
+                visited_directories.add(inode)
+                push_directory(path + "/" + dir_entry.name)
             elif dir_entry.is_file():
-                directories[path]["files"].append(
-                    {"name": dir_entry.name, "size": dir_entry.stat().st_size}
-                )
-    scan_result = {"root": root_path, "time": start_time, "directories": directories}
+                file_dict = {
+                    "name": dir_entry.name,
+                    "size": dir_entry.stat().st_size,
+                }  # type: FileDict
+                directories[path]["files"].append(file_dict)
+    scan_result = {
+        "root": root_path,
+        "time": start_time,
+        "directories": directories,
+    }  # type: ScanResult
     return scan_result
 
 
