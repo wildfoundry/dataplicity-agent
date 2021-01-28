@@ -7,7 +7,7 @@ import typing
 
 
 if typing.TYPE_CHECKING:
-    from typing import Dict, List, Set, Tuple, TypedDict, Iterable
+    from typing import Dict, List, Optional, Set, Tuple, TypedDict, Iterable
 
     FileDict = TypedDict("FileDict", {"name": str, "size": int})
     DirectoryDict = TypedDict(
@@ -21,8 +21,8 @@ if typing.TYPE_CHECKING:
 log = logging.getLogger("agent")
 
 
-def directory_scan(root_path):
-    # type: (str) -> ScanResult
+def directory_scan(root_path, max_depth=10):
+    # type: (str, Optional[int]) -> ScanResult
     """Scan and serialize directory structure.
 
     Uses scandir to do this quite efficiently (without code recursion). Recursive links 
@@ -56,7 +56,6 @@ def directory_scan(root_path):
     """
     root_path = os.path.abspath(root_path)
     stack = []  # type: List[Tuple[str, Iterable[os.DirEntry]]]
-
     directories = {}  # type: Dict[str, DirectoryDict]
     visited_directories = set()  # type: Set[int]
 
@@ -71,9 +70,9 @@ def directory_scan(root_path):
         else:
             directories[path] = {"files": [], "dirs": []}
 
+    scan_time = time.time()
     push_directory(".")
 
-    start_time = time.time()
     while stack:
         path, iter_scan = stack[-1]
         try:
@@ -85,6 +84,9 @@ def directory_scan(root_path):
                 # Exclude hidden files and directories
                 continue
             if dir_entry.is_dir():
+                if max_depth is not None and len(stack) >= max_depth:
+                    # Max depth reach, so skip this dir
+                    continue
                 inode = dir_entry.inode()
                 if inode in visited_directories:
                     # We have visited this directory before, we must have a recursive link
@@ -100,7 +102,7 @@ def directory_scan(root_path):
                 directories[path]["files"].append(file_dict)
     scan_result = {
         "root": root_path,
-        "time": start_time,
+        "time": scan_time,
         "directories": directories,
     }  # type: ScanResult
     return scan_result
