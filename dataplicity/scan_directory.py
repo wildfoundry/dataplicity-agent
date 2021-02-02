@@ -7,9 +7,11 @@ import os.path
 import time
 
 try:
-    from scandir import DirEntry, scandir
-except ImportError:
+    # Scandir from stdlib in Python3
     from os import DirEntry, scandir
+except ImportError:
+    # scandir from pypy on Python 2.7
+    from scandir import DirEntry, scandir
 
 from typing import Dict, List, Optional, Set, Tuple, TypedDict
 
@@ -59,7 +61,7 @@ def scan_directory(root_path, max_depth=10):
     """
     if not os.path.isdir(root_path):
         raise ScanDirectoryError("Can't scan %s; not a directory", root_path)
-    root_path = os.path.abspath(root_path)
+    root_path = os.path.abspath(os.path.expanduser(root_path))
     stack = []  # type: List[ScanStackEntry]
     push = stack.append
     pop = stack.pop
