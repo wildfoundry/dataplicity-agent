@@ -2,6 +2,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import logging
+import random
 from time import sleep, time
 from threading import Event, Thread
 from typing import Optional
@@ -15,7 +16,9 @@ log = logging.getLogger("agent")
 class DirectoryScanner(Thread):
     """Periodically scans and uploads directory information."""
 
-    def __init__(self, exit_event, root_path, rpc, serial, auth_token, period=60 * 60):
+    def __init__(
+        self, exit_event, root_path, rpc, serial, auth_token, period=60 * 60 * 24
+    ):
         # type: (Event, str, jsonrpc.JSONRPC, str, str, float) -> None
         self.exit_event = exit_event
         self.root_path = root_path
@@ -32,7 +35,7 @@ class DirectoryScanner(Thread):
         """Use the exit event to sleep until its time for a scan"""
         # Perform a single scan on startup
         log.info("Starting directory scan for %s", self.root_path)
-        sleep(10)  # Small sleep to let everything settle
+        sleep(random.randint(10, 60))  # Small sleep to let everything settle
         self.perform_scan()
 
         # Perform scans at regular intervals
@@ -40,6 +43,8 @@ class DirectoryScanner(Thread):
 
         while not self.exit_event.is_set():
             if self.scan_event.wait(5):
+                if self.exit_event.is_set():
+                    break
                 # schedule_scan has been called in other thread
                 self.scan_event.clear()
                 log.debug("Performing on-demand scan")

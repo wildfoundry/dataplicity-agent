@@ -13,14 +13,14 @@ except ImportError:
     # scandir from pypy on Python 2.7
     from scandir import DirEntry, scandir
 
-from typing import Dict, List, Optional, Set, Tuple, TypedDict
+from typing import Dict, Iterable, List, Optional, Set, Tuple, TypedDict
 
 FileInfo = Tuple[str, int]
 DirectoryDict = TypedDict("DirectoryDict", {"files": List[FileInfo], "dirs": List[str]})
 ScanResult = TypedDict(
     "ScanResult", {"root": str, "time": float, "directories": Dict[str, DirectoryDict]},
 )
-ScanStackEntry = Tuple[str, DirEntry]
+_ScanStackEntry = Tuple[str, Iterable[DirEntry]]
 
 log = logging.getLogger("agent")
 
@@ -62,7 +62,7 @@ def scan_directory(root_path, max_depth=10):
     if not os.path.isdir(root_path):
         raise ScanDirectoryError("Can't scan %s; not a directory", root_path)
     root_path = os.path.abspath(os.path.expanduser(root_path))
-    stack = []  # type: List[ScanStackEntry]
+    stack = []  # type: List[_ScanStackEntry]
     push = stack.append
     pop = stack.pop
     directories = {}  # type: Dict[str, DirectoryDict]
@@ -76,7 +76,7 @@ def scan_directory(root_path, max_depth=10):
             stack_entry = path, scandir(scan_path)
             push(stack_entry)
         except Exception:
-            log.exception("error in os.scan(%s)", scan_path)
+            log.exception("error in scandir(%r)", scan_path)
         else:
             directories[path] = {"files": [], "dirs": []}
 
@@ -88,25 +88,27 @@ def scan_directory(root_path, max_depth=10):
         try:
             dir_entry = next(scan)
         except StopIteration:
+            # End of directory scan, we can discard top of stack
             pop()
-        else:
-            if dir_entry.name.startswith("."):
-                # Exclude hidden files and directories
+            continue
+        if dir_entry.name.startswith("."):
+            # Exclude hidden files and directories
+            continue
+        if dir_entry.is_dir():
+            if max_depth is not None and len(stack) >= max_depth:
+                # Max depth reached, so skip this dir
                 continue
-            if dir_entry.is_dir():
-                if max_depth is not None and len(stack) >= max_depth:
-                    # Max depth reached, so skip this dir
-                    continue
-                inode = dir_entry.inode()
-                if inode in visited_directories:
-                    # We have visited this directory before, we must have a recursive link
-                    continue
-                directories[path]["dirs"].append(dir_entry.name)
-                visited_directories.add(inode)
-                push_directory(join(path, dir_entry.name))
-            elif dir_entry.is_file():
-                file_info = (dir_entry.name, dir_entry.stat().st_size)
-                directories[path]["files"].append(file_info)
+            inode = dir_entry.inode()
+            if inode in visited_directories:
+                # We have visited this directory before, we must have a recursive link
+                continue
+            directories[path]["dirs"].append(dir_entry.name)
+            visited_directories.add(inode)
+            push_directory(join(path, dir_entry.name))
+        elif dir_entry.is_file():
+            file_info = (dir_entry.name, dir_entry.stat().st_size)
+            directories[path]["files"].append(file_info)
+
     scan_result = {
         "root": root_path,
         "time": scan_time,
