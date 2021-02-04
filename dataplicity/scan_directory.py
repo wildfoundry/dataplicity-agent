@@ -13,10 +13,12 @@ except ImportError:
     # scandir from pypy on Python 2.7
     from scandir import DirEntry, scandir
 
-from typing import Dict, Iterable, List, Optional, Set, Tuple, TypedDict
+from typing import Dict, Iterable, List, Optional, Set, Tuple, Union, TypedDict
 
-FileInfo = Tuple[str, int]
-DirectoryDict = TypedDict("DirectoryDict", {"files": List[FileInfo], "dirs": List[str]})
+FileInfo = Union[str, Tuple[str, int]]
+DirectoryDict = TypedDict(
+    "DirectoryDict", {"files": List[FileInfo], "dirs": List[str]}, total=False
+)
 ScanResult = TypedDict(
     "ScanResult", {"root": str, "time": float, "directories": Dict[str, DirectoryDict]},
 )
@@ -29,8 +31,8 @@ class ScanDirectoryError(Exception):
     """Unable to scan the directory."""
 
 
-def scan_directory(root_path, max_depth=10):
-    # type: (str, Optional[int]) -> ScanResult
+def scan_directory(root_path, file_sizes=False, max_depth=10):
+    # type: (str, bool, Optional[int]) -> ScanResult
     """Scan and serialize directory structure.
 
     Uses scandir to do this quite efficiently (without code recursion). Recursive links 
@@ -43,9 +45,9 @@ def scan_directory(root_path, max_depth=10):
         "time": <float: EPOCH TIME>,
         "directories": {
             <str: RELATIVE PATH>: {
-                "dirs": [<str: NAME>, ...],
-                "files: [
-                    (<str: NAME>, <int: FILESIZE>),
+                "dirs" (optional): [<str: NAME>, ...],
+                "files" (optional): [
+                    <str: Name> OR (<str: NAME>, <int: FILESIZE>),
                     ...                    
                 ]
             },
@@ -55,6 +57,8 @@ def scan_directory(root_path, max_depth=10):
 
     Args:
         root_path (str): Root path
+        file_sizes (boolean, optional): Add file sizes, defaults to False
+        max_depth (int, optional): Maximum number of depth of directory, defaults to 10
 
     Returns:
         dict: Serialized directory structure
@@ -76,9 +80,12 @@ def scan_directory(root_path, max_depth=10):
             stack_entry = path, scandir(scan_path)
             push(stack_entry)
         except Exception:
-            log.exception("error in scandir(%r)", scan_path)
+            # Doesn't matter what the error is, log it and continue
+            log.error("error in scandir(%r)", scan_path)
         else:
-            directories[path] = {"files": [], "dirs": []}
+            # This dict may contain "files" and "dirs", but are
+            # omitted by default for brevity.
+            directories[path] = {}
 
     scan_time = time.time()
     push_directory("")
@@ -102,12 +109,16 @@ def scan_directory(root_path, max_depth=10):
             if inode in visited_directories:
                 # We have visited this directory before, we must have a recursive link
                 continue
-            directories[path]["dirs"].append(dir_entry.name)
+            directories[path].setdefault("dirs", []).append(dir_entry.name)
             visited_directories.add(inode)
             push_directory(join(path, dir_entry.name))
         elif dir_entry.is_file():
-            file_info = (dir_entry.name, dir_entry.stat().st_size)
-            directories[path]["files"].append(file_info)
+            file_info = (
+                (dir_entry.name, dir_entry.stat().st_size)
+                if file_sizes
+                else dir_entry.name
+            )
+            directories[path].setdefault("files", []).append(file_info)
 
     scan_result = {
         "root": root_path,
