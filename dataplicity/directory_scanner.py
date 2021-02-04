@@ -42,16 +42,13 @@ class DirectoryScanner(Thread):
     def run(self):
         # type: () -> None
         """Use the exit event to sleep until its time for a scan"""
-        # Perform a single scan on startup
         log.info("Starting directory scanner for %s", self.root_path)
         # Small random delay on startup to avoid devices synchronizing
         if self.exit_event.wait(random.randint(5, 15)):
             # Client must have exited while we were waiting
             return
-
         # Run first scan on startup
         self.perform_scan()
-
         # Perform scans at regular intervals
         scan_time = time() + self.period
 
