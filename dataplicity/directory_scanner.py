@@ -36,7 +36,8 @@ class DirectoryScanner(Thread):
         self.period = period
         self.previous_scan = None  # type: Optional[ScanResult]
         self.scan_event = Event()
-        super(DirectoryScanner, self).__init__(daemon=True)
+        super(DirectoryScanner, self).__init__()
+        self.daemon = True
 
     def run(self):
         # type: () -> None
@@ -45,7 +46,7 @@ class DirectoryScanner(Thread):
         log.info("Starting directory scanner for %s", self.root_path)
         # Small random delay on startup to avoid devices synchronizing
         if self.exit_event.wait(random.randint(5, 15)):
-            #  Client must have exited while we were waiting
+            # Client must have exited while we were waiting
             return
 
         self.perform_scan()

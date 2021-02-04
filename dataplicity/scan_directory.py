@@ -63,9 +63,9 @@ def scan_directory(root_path, file_sizes=False, max_depth=10):
     Returns:
         dict: Serialized directory structure
     """
-    if not os.path.isdir(root_path):
-        raise ScanDirectoryError("Can't scan %s; not a directory", root_path)
     root_path = os.path.abspath(os.path.expanduser(root_path))
+    if not os.path.isdir(root_path):
+        raise ScanDirectoryError("Can't scan %s; not a directory" % root_path)
     stack = []  # type: List[_ScanStackEntry]
     push = stack.append
     pop = stack.pop
@@ -79,9 +79,9 @@ def scan_directory(root_path, file_sizes=False, max_depth=10):
         try:
             stack_entry = path, scandir(scan_path)
             push(stack_entry)
-        except Exception:
+        except Exception as error:
             # Doesn't matter what the error is, log it and continue
-            log.error("error in scandir(%r)", scan_path)
+            log.warning("error in scandir(%r); %s", scan_path, error)
         else:
             # This dict may contain "files" and "dirs", but are
             # omitted by default for brevity.

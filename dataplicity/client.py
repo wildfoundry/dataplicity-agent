@@ -66,8 +66,8 @@ class Client(object):
             self.remote = jsonrpc.JSONRPC(self.rpc_url)
             self.serial = self.serial or self._read(constants.SERIAL_LOCATION)
             self.auth_token = self.auth_token or self._read(constants.AUTH_LOCATION)
-            self.remote_directory = self.remote_directory or self._read(
-                constants.REMOTE_DIRECTORY_LOCATION
+            self.remote_directory = (
+                self.remote_directory or constants.REMOTE_DIRECTORY_LOCATION
             )
 
             self.poll_rate_seconds = 60
