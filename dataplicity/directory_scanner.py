@@ -49,6 +49,7 @@ class DirectoryScanner(Thread):
             # Client must have exited while we were waiting
             return
 
+        # Run first scan on startup
         self.perform_scan()
 
         # Perform scans at regular intervals
@@ -85,7 +86,7 @@ class DirectoryScanner(Thread):
         except ScanDirectoryError as error:
             log.warning(str(error))
         except Exception:
-            log.exception("failed to scan directory; %s", self.root_path)
+            log.exception("failed to scan directory %s", self.root_path)
         else:
             try:
                 self.upload_directory(directory, file_sizes=file_sizes)
