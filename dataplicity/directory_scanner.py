@@ -66,7 +66,7 @@ class DirectoryScanner(Thread):
                 # Regularly scheduled scan
                 scan_time += self.period
                 log.debug("Performing regular scan")
-                # Regular scans don't include file sizes as it would likely increase data uses
+                # Regular scans don't include file sizes as it would likely increase data usage
                 # due to files changing sizes from scan to scan
                 self.perform_scan()
 
