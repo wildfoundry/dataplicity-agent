@@ -4,6 +4,7 @@ from __future__ import print_function
 import logging
 import platform
 from threading import Event, Lock
+import os
 import random
 import sys
 import time
@@ -13,6 +14,7 @@ from . import constants
 from . import device_meta
 from . import jsonrpc
 from .clockcheck import ClockCheckThread
+from .directory_scanner import DirectoryScanner
 from .disk_tools import disk_usage
 from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
@@ -25,11 +27,21 @@ log = logging.getLogger("agent")
 class Client(object):
     """Dataplicity client."""
 
-    def __init__(self, rpc_url=None, m2m_url=None, serial=None, auth_token=None):
+    def __init__(
+        self,
+        rpc_url=None,  # type: str
+        m2m_url=None,  # type: str
+        serial=None,  # type: str
+        auth_token=None,  # type: str
+        remote_directory=None,  # type: str
+    ):
+        # type: (...) -> None
         self.rpc_url = rpc_url or constants.SERVER_URL
         self.m2m_url = m2m_url or constants.M2M_URL
         self.auth_token = auth_token
         self.serial = serial
+        self.remote_directory = remote_directory
+
         self._sync_lock = Lock()
         self._sent_meta = False
         self.exit_event = Event()
@@ -39,6 +51,7 @@ class Client(object):
     @classmethod
     def _read(cls, path):
         """Read contents of a file, strip whitespace."""
+        path = os.path.expanduser(path)
         with open(path, "rt") as fh:
             data = fh.read().strip()
         return data
@@ -53,6 +66,10 @@ class Client(object):
             self.remote = jsonrpc.JSONRPC(self.rpc_url)
             self.serial = self.serial or self._read(constants.SERIAL_LOCATION)
             self.auth_token = self.auth_token or self._read(constants.AUTH_LOCATION)
+            self.remote_directory = (
+                self.remote_directory or constants.REMOTE_DIRECTORY_LOCATION
+            )
+
             self.poll_rate_seconds = 60
             self.disk_poll_rate_seconds = 60 * 60
             self.next_disk_poll_time = time.time()
@@ -65,7 +82,15 @@ class Client(object):
             self.m2m = M2MManager.init(self, m2m_url=self.m2m_url)
             self.port_forward = PortForwardManager.init(self)
 
-        except:
+            self.directory_scanner = DirectoryScanner(
+                self.exit_event,
+                self.remote_directory,
+                self.remote,
+                self.serial,
+                self.auth_token,
+            )
+
+        except Exception:
             log.exception("failed to initialize client")
             raise
 
@@ -73,6 +98,7 @@ class Client(object):
         """Run the client "forever"."""
         clock_check_thread = ClockCheckThread()
         clock_check_thread.start()
+        self.directory_scanner.start()
 
         try:
             self.poll()
