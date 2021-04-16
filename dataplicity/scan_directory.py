@@ -132,14 +132,20 @@ if __name__ == "__main__":
     import sys
 
     try:
-        from rich import print
+        from rich.console import Console
+        console = Console()
+        print = console.print
     except ImportError:
         pass
 
     start = time.time()
     scan = scan_directory(sys.argv[1])
     end_time = time.time()
-    print(scan)
-    print(len(scan["directories"]), "directories scanned")
-    print("{:.1f}ms".format((end_time - start) * 1000))
+
+    import json
+    scan_json = json.dumps(scan, indent=4)
+
+    print(scan_json, soft_wrap=True)
+    # print(len(scan["directories"]), "directories scanned")
+    # print("{:.1f}ms".format((end_time - start) * 1000))
 
