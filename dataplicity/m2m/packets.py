@@ -88,6 +88,7 @@ class PacketType(IntEnum):
     close_remote_file = 26
     read_remote_file = 27
     read_remote_file_result = 28
+    rescan_remote_directory = 29
 
     response = 100
 
@@ -427,3 +428,54 @@ class PeerClosePort(M2MPacket):
     type = PacketType.peer_close_port
     attributes = [("node", bytes), ("port", int)]
 
+
+class OpenRemoteFile(M2MPacket):
+    """Server requests opening a remote file."""
+
+    type = PacketType.open_remote_file
+    attributes = [("upload_id", bytes), ("path", bytes)]
+
+
+class OpenRemoteFileResult(M2MPacket):
+    """Tell server about the opening of a remote file."""
+
+    type = PacketType.open_remote_file_result
+    attributes = [
+        ("upload_id", bytes),
+        ("size", int),
+        ("fail", int),
+        ("fail_reason", bytes),
+    ]
+
+
+class CloseRemoteFile(M2MPacket):
+    type = PacketType.close_remote_file
+    attributes = [("upload_id", bytes)]
+
+
+class ReadRemoteFile(M2MPacket):
+    """Server requests read from remote file."""
+
+    type = PacketType.read_remote_file
+    attributes = [("upload_id", bytes), ("offset", int), ("size", int)]
+
+
+class ReadRemoteFileResult(M2MPacket):
+    """Tell server about result of read."""
+
+    type = PacketType.read_remote_file_result
+    attributes = [
+        ("upload_id", bytes),
+        ("offset", int),
+        ("size", int),
+        ("data", bytes),
+        ("fail", int),
+        ("fail_reason", bytes),
+    ]
+
+
+class RescanRemoteDirectory(M2MPacket):
+    """Server wants us to rescan  the remote directory."""
+
+    type = PacketType.rescan_remote_directory
+    attributes = []

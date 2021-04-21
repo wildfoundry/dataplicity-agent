@@ -71,7 +71,7 @@ class DirectoryScanner(Thread):
                 self.perform_scan()
 
     def schedule_scan(self):
-        # type: (bool) -> None
+        # type: () -> None
         """Immediately perform scan in thread."""
         self.scan_event.set()
 

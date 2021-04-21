@@ -9,6 +9,9 @@ if typing.TYPE_CHECKING:
     from typing import Text
 
 from . import disk_tools
+from .directory_scanner import DirectoryScanner
+from .m2m.packets import PacketType
+from .m2m.wsclient import WSClient
 
 # Amount of free space (bytes) to leave on disk
 FREE_SPACE_MARGIN = 20 * 1000 * 1000
@@ -56,14 +59,20 @@ def validate_path(path):
 class RemoteDirectory(object):
     """Manages remote directory."""
 
-    def __init__(self, path):
-        # type: (Text) -> None
+    def __init__(self, path, directory_scanner):
+        # type: (Text, DirectoryScanner) -> None
         self.path = path
+        self.directory_scanner = directory_scanner
         self.temp_path = tempfile.gettempdir()
 
     def __repr__(self):
         # type: () -> Text
         return "RemoteDirectory(%r)" % self.path
+
+    def scan(self):
+        # type: () -> None
+        """Scan remote directory."""
+        self.directory_scanner.schedule_scan()
 
     def get_snapshot_path(self, upload_id):
         # type: (Text) -> Text
@@ -124,10 +133,12 @@ class RemoteDirectory(object):
             raise IllegalPath("Path %s is illegal" % path)
 
         try:
-
             # Copy file to temporary location, creating a "snapshot"
             shutil.copyfile(file_path, snapshot_path)
             snapshot_size = os.path.getsize(snapshot_path)
+            log.debug(
+                "created snapshot for %s; snapshot_path", file_path, snapshot_path
+            )
             return snapshot_size
         except Exception as error:
             log.error("failed to add_upload; %r", error)
@@ -153,6 +164,7 @@ class RemoteDirectory(object):
             with open(snapshot_path, "rb") as snapshot_file:
                 snapshot_file.seek(offset)
                 data = snapshot_file.read(size)
+                log.debug("read %i bytes from %s", len(data), snapshot_path)
         except Exception as error:
             # Most likely, the snapshot file has been removed
             log.error("failed to read_upload; %r", error)
@@ -167,10 +179,73 @@ class RemoteDirectory(object):
             upload_id (str): Upload ID.
         """
         snapshot_path = self.get_snapshot_path(upload_id)
-        if not os.path.exists(snapshot_path):
-            # If its already been removed, this is a no-opp
-            return
+        # If its already been removed, this is a no-opp
+        if os.path.exists(snapshot_path):
+            try:
+                os.remove(snapshot_path)
+            except Exception as error:
+                log.warning("failed to remove %r; %r", snapshot_path, error)
+
+    def on_open_remote_file(self, client, upload_id, path):
+        # type: (WSClient, bytes, bytes) -> None
+        """Open remote file packet."""
         try:
-            os.remove(snapshot_path)
+            size = self.add_upload(path.decode("utf-8"), upload_id.decode("utf-8"))
+        except RemoteDirectoryError as error:
+            # Known fail that we can report to the user
+            client.send(
+                PacketType.open_remote_file_result, upload_id, -1, 1, str(error)
+            )
         except Exception as error:
-            log.warning("failed to remove %r; %r", snapshot_path, error)
+            client.send(
+                PacketType.open_remote_file_result,
+                upload_id,
+                -1,
+                1,
+                "open failed, see dataplicity.log",
+            )
+            log.exception("failed to add upload")
+        else:
+            client.send(PacketType.open_remote_file_result, upload_id, size, 0, "")
+
+    def on_close_remote_file(self, client, upload_id):
+        # type: (WSClient, bytes) -> None
+        """On close remote file packet."""
+        try:
+            self.close_upload(upload_id.decode("utf-8"))
+        except Exception:
+            log.exception("failed to close upload")
+
+    def on_read_remote_file(self, client, upload_id, offset, size):
+        # type: (WSClient, bytes, int, int) -> None
+        try:
+            data = self.read_upload(upload_id.decode("utf-8"), offset, size)
+        except RemoteDirectoryError as error:
+            client.send(
+                PacketType.read_remote_file_result,
+                upload_id=upload_id,
+                size=size,
+                data="",
+                fail=1,
+                fail_reason=str(error),
+            )
+        except Exception:
+            log.exception("failed to read upload")
+            client.send(
+                PacketType.read_remote_file_result,
+                upload_id=upload_id,
+                size=size,
+                data="",
+                fail=1,
+                fail_reason="read failed, see dataplicity.log",
+            )
+        else:
+            client.send(
+                PacketType.read_remote_file_result,
+                upload_id=upload_id,
+                size=size,
+                data=data,
+                fail=0,
+                fail_reason="",
+            )
+

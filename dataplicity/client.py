@@ -18,6 +18,7 @@ from .directory_scanner import DirectoryScanner
 from .disk_tools import disk_usage
 from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
+from .remote_directory import RemoteDirectory
 from .tags import get_tag_list, TagError
 import six
 
@@ -33,14 +34,14 @@ class Client(object):
         m2m_url=None,  # type: str
         serial=None,  # type: str
         auth_token=None,  # type: str
-        remote_directory=None,  # type: str
+        remote_directory_path=None,  # type: str
     ):
         # type: (...) -> None
         self.rpc_url = rpc_url or constants.SERVER_URL
         self.m2m_url = m2m_url or constants.M2M_URL
         self.auth_token = auth_token
         self.serial = serial
-        self.remote_directory = remote_directory
+        self.remote_directory_path = remote_directory_path
 
         self._sync_lock = Lock()
         self._sent_meta = False
@@ -66,9 +67,10 @@ class Client(object):
             self.remote = jsonrpc.JSONRPC(self.rpc_url)
             self.serial = self.serial or self._read(constants.SERIAL_LOCATION)
             self.auth_token = self.auth_token or self._read(constants.AUTH_LOCATION)
-            self.remote_directory = (
-                self.remote_directory or constants.REMOTE_DIRECTORY_LOCATION
+            self.remote_directory_path = (
+                self.remote_directory_path or constants.REMOTE_DIRECTORY_LOCATION
             )
+            log.info("remote_directory=%s", self.remote_directory_path)
 
             self.poll_rate_seconds = 60
             self.disk_poll_rate_seconds = 60 * 60
@@ -79,16 +81,20 @@ class Client(object):
             log.info("serial=%s", self.serial)
             log.info("poll=%s", self.poll_rate_seconds)
 
-            self.m2m = M2MManager.init(self, m2m_url=self.m2m_url)
-            self.port_forward = PortForwardManager.init(self)
-
             self.directory_scanner = DirectoryScanner(
                 self.exit_event,
-                self.remote_directory,
+                self.remote_directory_path,
                 self.remote,
                 self.serial,
                 self.auth_token,
             )
+            self.remote_directory = RemoteDirectory(
+                self.remote_directory_path, self.directory_scanner
+            )
+            self.m2m = M2MManager.init(
+                self, self.remote_directory, m2m_url=self.m2m_url
+            )
+            self.port_forward = PortForwardManager.init(self)
 
         except Exception:
             log.exception("failed to initialize client")
