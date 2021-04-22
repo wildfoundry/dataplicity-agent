@@ -88,7 +88,7 @@ class PacketType(IntEnum):
     close_remote_file = 26
     read_remote_file = 27
     read_remote_file_result = 28
-    rescan_remote_directory = 29
+    scan_remote_directory = 29
 
     response = 100
 

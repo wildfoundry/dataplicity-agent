@@ -462,8 +462,9 @@ class WSClient(threading.Thread):
     @expose(PacketType.read_remote_file)
     def on_read_remote_file(self, packet_type, upload_id, offset, size):
         """Server wants to read from remote file."""
-        self.on_read_remote_file(self, upload_id, offset, size)
+        self.remote_directory.on_read_remote_file(self, upload_id, offset, size)
 
-    @expose(PacketType.rescan_remote_directory)
-    def on_rescan_remote_directory(self, packet_type):
+    @expose(PacketType.scan_remote_directory)
+    def on_scan_remote_directory(self, packet_type):
+        """Server requests a scan of the remote directory."""
         self.remote_directory.scan()
