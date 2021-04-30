@@ -477,5 +477,5 @@ class ReadRemoteFileResult(M2MPacket):
 class RescanRemoteDirectory(M2MPacket):
     """Server wants us to rescan  the remote directory."""
 
-    type = PacketType.rescan_remote_directory
+    type = PacketType.scan_remote_directory
     attributes = []
