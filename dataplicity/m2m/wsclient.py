@@ -452,7 +452,7 @@ class WSClient(threading.Thread):
     @expose(PacketType.open_remote_file)
     def on_open_remote_file(self, packet_type, upload_id, path):
         """Server wants to open a remote file."""
-        self.remote_directory.on_open_remote_file(upload_id, path)
+        self.remote_directory.on_open_remote_file(self, upload_id, path)
 
     @expose(PacketType.close_remote_file)
     def on_close_remote_file(self, packet_type, upload_id):

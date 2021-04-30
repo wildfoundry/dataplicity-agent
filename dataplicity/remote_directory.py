@@ -61,6 +61,7 @@ class RemoteDirectory(object):
 
     def __init__(self, path, directory_scanner):
         # type: (Text, DirectoryScanner) -> None
+        path = os.path.expanduser(path)
         self.path = path
         self.directory_scanner = directory_scanner
         self.temp_path = tempfile.gettempdir()
@@ -136,13 +137,11 @@ class RemoteDirectory(object):
             # Copy file to temporary location, creating a "snapshot"
             shutil.copyfile(file_path, snapshot_path)
             snapshot_size = os.path.getsize(snapshot_path)
-            log.debug(
-                "created snapshot for %s; snapshot_path", file_path, snapshot_path
-            )
+            log.debug("created snapshot for %s; %s", file_path, snapshot_path)
             return snapshot_size
         except Exception as error:
             log.error("failed to add_upload; %r", error)
-            raise AddFail("Unable to add upload %r %r", file_path, upload_id)
+            raise AddFail("Unable to add upload; %s" % error)
 
     def read_upload(self, upload_id, offset, size):
         # type: (Text, int, int) -> bytes
@@ -224,6 +223,7 @@ class RemoteDirectory(object):
             client.send(
                 PacketType.read_remote_file_result,
                 upload_id=upload_id,
+                offset=offset,
                 size=size,
                 data="",
                 fail=1,
@@ -234,6 +234,7 @@ class RemoteDirectory(object):
             client.send(
                 PacketType.read_remote_file_result,
                 upload_id=upload_id,
+                offset=offset,
                 size=size,
                 data="",
                 fail=1,
@@ -243,6 +244,7 @@ class RemoteDirectory(object):
             client.send(
                 PacketType.read_remote_file_result,
                 upload_id=upload_id,
+                offset=offset,
                 size=size,
                 data=data,
                 fail=0,
