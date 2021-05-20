@@ -15,7 +15,7 @@ except ImportError:
 
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Union, TypedDict
 
-FileInfo = Union[str, Tuple[str, int]]
+FileInfo = Tuple[str, int]
 DirectoryDict = TypedDict(
     "DirectoryDict", {"files": List[FileInfo], "dirs": List[str]}, total=False
 )
@@ -116,7 +116,7 @@ def scan_directory(root_path, file_sizes=False, max_depth=10):
             file_info = (
                 (dir_entry.name, dir_entry.stat().st_size)
                 if file_sizes
-                else dir_entry.name
+                else (dir_entry.name, -1)
             )
             directories[path].setdefault("files", []).append(file_info)
 
@@ -133,6 +133,7 @@ if __name__ == "__main__":
 
     try:
         from rich.console import Console
+
         console = Console()
         print = console.print
     except ImportError:
@@ -143,6 +144,7 @@ if __name__ == "__main__":
     end_time = time.time()
 
     import json
+
     scan_json = json.dumps(scan, indent=4)
 
     print(scan_json, soft_wrap=True)

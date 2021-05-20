@@ -112,7 +112,7 @@ class RemoteDirectory(object):
         Returns:
             int: The size of the snapshot file (in bytes)
         """
-        file_path = os.path.join(self.path, path)
+        file_path = os.path.join(self.path, path.lstrip("/"))
 
         if not validate_path(file_path):
             raise IllegalPath("Path %s is illegal" % file_path)
