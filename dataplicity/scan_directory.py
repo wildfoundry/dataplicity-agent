@@ -47,7 +47,7 @@ def scan_directory(root_path, file_sizes=False, max_depth=10):
             <str: RELATIVE PATH>: {
                 "dirs" (optional): [<str: NAME>, ...],
                 "files" (optional): [
-                    <str: Name> OR (<str: NAME>, <int: FILESIZE>),
+                    (<str: NAME>, <int: FILESIZE>),
                     ...                    
                 ]
             },
@@ -57,7 +57,8 @@ def scan_directory(root_path, file_sizes=False, max_depth=10):
 
     Args:
         root_path (str): Root path
-        file_sizes (boolean, optional): Add file sizes, defaults to False
+        file_sizes (boolean, optional): Add file sizes, defaults to False. If this is false, file sizes
+            will be reported as -1
         max_depth (int, optional): Maximum number of depth of directory, defaults to 10
 
     Returns:
@@ -126,28 +127,3 @@ def scan_directory(root_path, file_sizes=False, max_depth=10):
         "directories": directories,
     }  # type: ScanResult
     return scan_result
-
-
-if __name__ == "__main__":
-    import sys
-
-    try:
-        from rich.console import Console
-
-        console = Console()
-        print = console.print
-    except ImportError:
-        pass
-
-    start = time.time()
-    scan = scan_directory(sys.argv[1])
-    end_time = time.time()
-
-    import json
-
-    scan_json = json.dumps(scan, indent=4)
-
-    print(scan_json, soft_wrap=True)
-    # print(len(scan["directories"]), "directories scanned")
-    # print("{:.1f}ms".format((end_time - start) * 1000))
-
