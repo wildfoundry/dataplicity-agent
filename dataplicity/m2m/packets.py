@@ -449,6 +449,8 @@ class OpenRemoteFileResult(M2MPacket):
 
 
 class CloseRemoteFile(M2MPacket):
+    """Server requests close of remote file."""
+
     type = PacketType.close_remote_file
     attributes = [("upload_id", bytes)]
 
@@ -474,8 +476,8 @@ class ReadRemoteFileResult(M2MPacket):
     ]
 
 
-class RescanRemoteDirectory(M2MPacket):
-    """Server wants us to rescan  the remote directory."""
+class ScanRemoteDirectory(M2MPacket):
+    """Server wants us to rescan the remote directory."""
 
     type = PacketType.scan_remote_directory
     attributes = []
