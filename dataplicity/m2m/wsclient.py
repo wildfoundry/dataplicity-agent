@@ -224,7 +224,7 @@ class WSClient(threading.Thread):
                 for callback in self.callbacks[command_id]:
                     try:
                         callback(result)
-                    except:
+                    except Exception:
                         log.exception("error in command callback")
                 del self.callbacks[command_id]
 
@@ -235,7 +235,7 @@ class WSClient(threading.Thread):
                 for callback in callbacks:
                     try:
                         callback(None)
-                    except:
+                    except Exception:
                         log.exception("error clearing callback")
 
     def get_channel(self, channel_no):
@@ -400,7 +400,7 @@ class WSClient(threading.Thread):
         if self.channel_callback is not None:
             try:
                 self.channel_callback(channel, data)
-            except:
+            except Exception:
                 log.exception("error in channel callback")
         channel.on_data(data)
 
@@ -411,7 +411,7 @@ class WSClient(threading.Thread):
         if self.control_callback is not None:
             try:
                 self.control_callback(channel, data)
-            except:
+            except Exception:
                 log.exception("error in channel callback")
         channel.on_control(data)
 
@@ -446,25 +446,29 @@ class WSClient(threading.Thread):
         """An instruction packet contains application specific data."""
         try:
             self.on_instruction(sender, data)
-        except:
+        except Exception:
             log.exception("error handling instruction")
 
     @expose(PacketType.open_remote_file)
     def on_open_remote_file(self, packet_type, upload_id, path):
+        # type: (PacketType, bytes, bytes) -> None
         """Server wants to open a remote file."""
         self.remote_directory.on_open_remote_file(self, upload_id, path)
 
     @expose(PacketType.close_remote_file)
     def on_close_remote_file(self, packet_type, upload_id):
+        # type: (PacketType, bytes) -> None
         """Server wants to close a remote file."""
         self.remote_directory.on_close_remote_file(self, upload_id)
 
     @expose(PacketType.read_remote_file)
     def on_read_remote_file(self, packet_type, upload_id, offset, size):
+        # type: (PacketType, bytes, int, int) -> None
         """Server wants to read from remote file."""
         self.remote_directory.on_read_remote_file(self, upload_id, offset, size)
 
     @expose(PacketType.scan_remote_directory)
     def on_scan_remote_directory(self, packet_type):
+        # type: (PacketType) -> None
         """Server requests a scan of the remote directory."""
         self.remote_directory.scan()

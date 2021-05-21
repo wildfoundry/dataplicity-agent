@@ -14,7 +14,7 @@ from .m2m.packets import PacketType
 from .m2m.wsclient import WSClient
 
 # Amount of free space (bytes) to leave on disk
-FREE_SPACE_MARGIN = 20 * 1000 * 1000
+FREE_SPACE_MARGIN = 50 * 1000 * 1000
 
 
 log = logging.getLogger("agent")
@@ -120,13 +120,14 @@ class RemoteDirectory(object):
         try:
             disk_usage = disk_tools.disk_usage(self.temp_path)
             file_size = snapshot_size = os.path.getsize(file_path)
+        except Exception as error:
+            # Don't want to fail here, probably worth honoring the request
+            log.warning("failed to get disk usage information; %s", error)
+        else:
             if disk_usage.used + file_size > disk_usage.total - FREE_SPACE_MARGIN:
                 raise LowDiskSpace(
                     "not enough space on %s to create snapshot" % self.temp_path
                 )
-        except Exception as error:
-            # Don't want to fail here, probably worth honoring the request
-            log.warning("failed to get disk usage information; %s", error)
 
         snapshot_path = self.get_snapshot_path(upload_id)
         # Sanity check for path
@@ -193,15 +194,19 @@ class RemoteDirectory(object):
         except RemoteDirectoryError as error:
             # Known fail that we can report to the user
             client.send(
-                PacketType.open_remote_file_result, upload_id, -1, 1, str(error)
+                PacketType.open_remote_file_result,
+                upload_id=upload_id,
+                size=-1,
+                fail=1,
+                fail_reason=str(error),
             )
         except Exception as error:
             client.send(
                 PacketType.open_remote_file_result,
-                upload_id,
-                -1,
-                1,
-                "open failed, see dataplicity.log",
+                upload_id=upload_id,
+                size=-1,
+                fail=1,
+                fail_reason="open failed, see dataplicity.log",
             )
             log.exception("failed to add upload")
         else:
