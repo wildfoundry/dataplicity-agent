@@ -89,6 +89,7 @@ class PacketType(IntEnum):
     read_remote_file = 27
     read_remote_file_result = 28
     scan_remote_directory = 29
+    scan_remote_directory_result = 30
 
     response = 100
 
@@ -481,3 +482,11 @@ class ScanRemoteDirectory(M2MPacket):
 
     type = PacketType.scan_remote_directory
     attributes = []
+
+
+class ScanRemoteDirectoryResult(M2MPacket):
+    """Inform server about result of directory scan."""
+
+    type = PacketType.scan_remote_directory_result
+    attributes = [("error", bytes)]
+

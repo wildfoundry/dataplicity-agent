@@ -50,10 +50,7 @@ def validate_path(path):
     Returns:
         bool: True if the path is valid, otherwise False
     """
-    for component in path.split(os.sep):
-        if component == "..":
-            return False
-    return True
+    return ".." not in path.split(os.sep)
 
 
 class RemoteDirectory(object):
@@ -62,7 +59,7 @@ class RemoteDirectory(object):
     def __init__(self, path, directory_scanner):
         # type: (Text, DirectoryScanner) -> None
         path = os.path.expanduser(path)
-        self.path = path
+        self.path = os.path.abspath(path)
         self.directory_scanner = directory_scanner
         self.temp_path = tempfile.gettempdir()
 
@@ -73,7 +70,7 @@ class RemoteDirectory(object):
     def scan(self):
         # type: () -> None
         """Scan remote directory."""
-        self.directory_scanner.schedule_scan()
+        self.directory_scanner.perform_scan()
 
     def get_snapshot_path(self, upload_id):
         # type: (Text) -> Text
@@ -114,7 +111,7 @@ class RemoteDirectory(object):
         """
         file_path = os.path.join(self.path, path.lstrip("/"))
 
-        if not validate_path(file_path):
+        if not validate_path(file_path) or not file_path.startswith(self.path):
             raise IllegalPath("Path %s is illegal" % file_path)
 
         try:
