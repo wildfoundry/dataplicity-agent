@@ -22,7 +22,7 @@ from .packets import PacketType
 from .._version import __version__
 
 
-log = logging.getLogger('m2m')
+log = logging.getLogger("m2m")
 
 
 class ClientError(Exception):
@@ -39,7 +39,7 @@ class ChannelFile(object):
     def write(self, data):
         # http://stackoverflow.com/questions/23932332/writing-bytes-to-standard-output-in-a-way-compatible-with-both-python2-and-pyth
         # retrieve stdout as a binary file object
-        output = getattr(sys.stdout, 'buffer', sys.stdout)
+        output = getattr(sys.stdout, "buffer", sys.stdout)
         output.write(data)
         self.client.channel_write(self.channel_no, data)
 
@@ -80,7 +80,7 @@ class Channel(object):
             if self._close_callback is not None:
                 self._close_callback()
         except:
-            log.exception('error in close callback')
+            log.exception("error in close callback")
 
     @property
     def is_closed(self):
@@ -89,7 +89,7 @@ class Channel(object):
     def on_data(self, data):
         """On incoming data."""
         if self._closed:
-            log.debug('%s bytes from closed %r ignored', len(data), self)
+            log.debug("%s bytes from closed %r ignored", len(data), self)
             return
         if self._data_callback is not None:
             self._data_callback(data)
@@ -101,7 +101,7 @@ class Channel(object):
     def on_control(self, data):
         """On control data."""
         if self._closed:
-            log.debug('%s bytes from closed %r ignored', len(data), self)
+            log.debug("%s bytes from closed %r ignored", len(data), self)
             return
         if self._control_callback is not None:
             self._control_callback(data)
@@ -130,7 +130,7 @@ class Channel(object):
         # Block until data
         if block:
             if not self._data_event.wait(timeout):
-                return b''
+                return b""
 
         with self._lock:
             # Data may be spread across multiple / partial messages
@@ -147,7 +147,7 @@ class Channel(object):
             if not self.deque:
                 self._data_event.clear()
 
-        return b''.join(incoming_bytes)
+        return b"".join(incoming_bytes)
 
     def write(self, data):
         assert isinstance(data, bytes), "data must be bytes"
@@ -168,16 +168,21 @@ class Channel(object):
 class WSClient(threading.Thread):
     """Interface to the M2M server."""
 
-    def __init__(self, manager, url, uuid=None,
-                 channel_callback=None, control_callback=None,
-                 **kwargs):
+    def __init__(
+        self,
+        manager,
+        url,
+        remote_directory,
+        uuid=None,
+        channel_callback=None,
+        control_callback=None,
+        **kwargs
+    ):
         super(WSClient, self).__init__()
         self.manager = manager
         self.url = url
-        _user_agent = "Agent/{} {}".format(
-            __version__,
-            LOMOND_USER_AGENT
-        )
+        self.remote_directory = remote_directory
+        _user_agent = "Agent/{} {}".format(__version__, LOMOND_USER_AGENT)
         self.websocket = WebSocket(url, agent=_user_agent, compress=True)
         self.channel_callback = channel_callback
         self.control_callback = control_callback
@@ -192,18 +197,14 @@ class WSClient(threading.Thread):
         self.callbacks = defaultdict(list)
         self.hooks = defaultdict(list)
 
-        self.dispatcher = Dispatcher(
-            packet_cls=Packet,
-            handler_instance=self,
-            log=log
-        )
+        self.dispatcher = Dispatcher(packet_cls=Packet, handler_instance=self, log=log)
 
         self.name = "m2m"  # Thread name
         self.daemon = True
 
     def __repr__(self):
         """Return the URL."""
-        return 'WSClient({!r})'.format(self.url)
+        return "WSClient({!r})".format(self.url)
 
     @property
     def is_closed(self):
@@ -223,8 +224,8 @@ class WSClient(threading.Thread):
                 for callback in self.callbacks[command_id]:
                     try:
                         callback(result)
-                    except:
-                        log.exception('error in command callback')
+                    except Exception:
+                        log.exception("error in command callback")
                 del self.callbacks[command_id]
 
     def clear_callbacks(self):
@@ -234,8 +235,8 @@ class WSClient(threading.Thread):
                 for callback in callbacks:
                     try:
                         callback(None)
-                    except:
-                        log.exception('error clearing callback')
+                    except Exception:
+                        log.exception("error clearing callback")
 
     def get_channel(self, channel_no):
         # TODO: Create channels in response to packets
@@ -248,7 +249,7 @@ class WSClient(threading.Thread):
 
     def close_channel(self, channel_no):
         log.debug("request close")
-        self.send('request_close', port=channel_no)
+        self.send("request_close", port=channel_no)
 
     def hard_close_channels(self):
         """Called when all the channels have been abruptly closed."""
@@ -260,26 +261,26 @@ class WSClient(threading.Thread):
         try:
             with self.websocket:
                 for event in persist(self.websocket):
-                    log.debug('WS %r', event)
+                    log.debug("WS %r", event)
                     try:
                         self.on_event(event)
                     except Exception as error:
-                        log.exception('error handling websocket event')
+                        log.exception("error handling websocket event")
         except (SystemExit, KeyboardInterrupt):
-            log.info('exit requested')
+            log.info("exit requested")
         except Exception:
-            log.exception('unhandled error from websocket')
+            log.exception("unhandled error from websocket")
         self.on_close()
 
     def on_event(self, event):
         """Called when new websocket events arrive."""
-        if event.name == 'ready':
+        if event.name == "ready":
             self.on_ready()
-        elif event.name == 'disconnected':
+        elif event.name == "disconnected":
             self.on_disconnected()
-        elif event.name == 'binary':
+        elif event.name == "binary":
             self.on_binary(event.data)
-        elif event.name == 'poll':
+        elif event.name == "poll":
             self.sync_identity()
 
     def close(self, timeout=5):
@@ -293,7 +294,7 @@ class WSClient(threading.Thread):
             packet = PacketType[packet].value
         if isinstance(packet, (PacketType, int)):
             packet = Packet.create(packet, *args, **kwargs)
-        if not getattr(packet, 'no_log', False):
+        if not getattr(packet, "no_log", False):
             log.debug("sending %r", packet)
 
         packet_bytes = packet.encode_binary()
@@ -322,7 +323,7 @@ class WSClient(threading.Thread):
         try:
             packet = bencode.decode(data)
         except:
-            log.exception('packet could not be decoded')
+            log.exception("packet could not be decoded")
         else:
             self.on_packet(packet)
 
@@ -342,7 +343,7 @@ class WSClient(threading.Thread):
             packet_type = packets.PacketType(packet[0])
             packet_body = packet[1:]
         except:
-            log.exception('packet is badly formatted')
+            log.exception("packet is badly formatted")
         else:
             self.dispatcher.dispatch(packet_type, packet_body)
 
@@ -352,17 +353,13 @@ class WSClient(threading.Thread):
 
     def on_instruction(self, sender, data):
         """Called with an instruction."""
-        log.debug('instruction from {%s} %r', sender, data)
+        log.debug("instruction from {%s} %r", sender, data)
         self.manager.on_instruction(sender, data)
 
     def channel_control_write(self, channel, control_dict):
         """Send a channel control packet."""
         control_json = json.dumps(control_dict)
-        self.send(
-            PacketType.request_send_control,
-            channel=channel,
-            data=control_json
-        )
+        self.send(PacketType.request_send_control, channel=channel, data=control_json)
 
     # --------------------------------------------------------
     # Packet handlers
@@ -377,14 +374,14 @@ class WSClient(threading.Thread):
     def handle_set_identity(self, packet_type, identity):
         """Server is telling us about our identity."""
         if not self.is_closed:
-            log.debug('setting identity to %s', identity)
+            log.debug("setting identity to %s", identity)
             self.identity = identity
             self.sync_identity()
 
     @expose(PacketType.ping)
     def handle_ping(self, packet_type, data):
         """Ping send from the server, send back a pong with the same data."""
-        self.send('pong', data=data[:1024])
+        self.send("pong", data=data[:1024])
 
     @expose(PacketType.welcome)
     def handle_welcome(self, packet_type):
@@ -403,8 +400,8 @@ class WSClient(threading.Thread):
         if self.channel_callback is not None:
             try:
                 self.channel_callback(channel, data)
-            except:
-                log.exception('error in channel callback')
+            except Exception:
+                log.exception("error in channel callback")
         channel.on_data(data)
 
     @expose(PacketType.route_control)
@@ -414,20 +411,20 @@ class WSClient(threading.Thread):
         if self.control_callback is not None:
             try:
                 self.control_callback(channel, data)
-            except:
-                log.exception('error in channel callback')
+            except Exception:
+                log.exception("error in channel callback")
         channel.on_control(data)
 
     @expose(PacketType.notify_open)
     def on_notify_open(self, packet_type, channel_no):
         """The server has told us of a new channel."""
         channel = self.get_channel(channel_no)
-        log.debug('%s opened', channel)
+        log.debug("%s opened", channel)
 
     @expose(PacketType.notify_close)
     def on_notify_close(self, packet_type, channel_no):
         """The server has told us of a channel being closed."""
-        log.debug('%s closed', channel_no)
+        log.debug("%s closed", channel_no)
         if self.has_channel(channel_no):
             channel = self.get_channel(channel_no)
             channel.on_close()
@@ -437,7 +434,7 @@ class WSClient(threading.Thread):
     def on_login_success(self, packet_type, user):
         """Logged in users have special privileges (typically not needed by dpcore clients)."""
         self.user = user
-        log.debug('logged in as %s', user)
+        log.debug("logged in as %s", user)
 
     @expose(PacketType.response)
     def on_response(self, packet_type, command_id, result):
@@ -449,5 +446,34 @@ class WSClient(threading.Thread):
         """An instruction packet contains application specific data."""
         try:
             self.on_instruction(sender, data)
-        except:
-            log.exception('error handling instruction')
+        except Exception:
+            log.exception("error handling instruction")
+
+    @expose(PacketType.open_remote_file)
+    def on_open_remote_file(self, packet_type, upload_id, path):
+        # type: (PacketType, bytes, bytes) -> None
+        """Server wants to open a remote file."""
+        self.remote_directory.on_open_remote_file(self, upload_id, path)
+
+    @expose(PacketType.close_remote_file)
+    def on_close_remote_file(self, packet_type, upload_id):
+        # type: (PacketType, bytes) -> None
+        """Server wants to close a remote file."""
+        self.remote_directory.on_close_remote_file(self, upload_id)
+
+    @expose(PacketType.read_remote_file)
+    def on_read_remote_file(self, packet_type, upload_id, offset, size):
+        # type: (PacketType, bytes, int, int) -> None
+        """Server wants to read from remote file."""
+        self.remote_directory.on_read_remote_file(self, upload_id, offset, size)
+
+    @expose(PacketType.scan_remote_directory)
+    def on_scan_remote_directory(self, packet_type):
+        # type: (PacketType) -> None
+        """Server requests a scan of the remote directory."""
+        try:
+            self.remote_directory.scan()
+        except Exception as error:
+            self.send("scan_remote_directory_result", str(error))
+        else:
+            self.send("scan_remote_directory_result", "")

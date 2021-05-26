@@ -15,7 +15,7 @@ except ImportError:
 
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Union, TypedDict
 
-FileInfo = Union[str, Tuple[str, int]]
+FileInfo = Tuple[str, int]
 DirectoryDict = TypedDict(
     "DirectoryDict", {"files": List[FileInfo], "dirs": List[str]}, total=False
 )
@@ -47,7 +47,7 @@ def scan_directory(root_path, file_sizes=False, max_depth=10):
             <str: RELATIVE PATH>: {
                 "dirs" (optional): [<str: NAME>, ...],
                 "files" (optional): [
-                    <str: Name> OR (<str: NAME>, <int: FILESIZE>),
+                    (<str: NAME>, <int: FILESIZE>),
                     ...                    
                 ]
             },
@@ -57,7 +57,8 @@ def scan_directory(root_path, file_sizes=False, max_depth=10):
 
     Args:
         root_path (str): Root path
-        file_sizes (boolean, optional): Add file sizes, defaults to False
+        file_sizes (boolean, optional): Add file sizes, defaults to False. If this is false, file sizes
+            will be reported as -1
         max_depth (int, optional): Maximum number of depth of directory, defaults to 10
 
     Returns:
@@ -116,7 +117,7 @@ def scan_directory(root_path, file_sizes=False, max_depth=10):
             file_info = (
                 (dir_entry.name, dir_entry.stat().st_size)
                 if file_sizes
-                else dir_entry.name
+                else (dir_entry.name, -1)
             )
             directories[path].setdefault("files", []).append(file_info)
 
@@ -126,20 +127,3 @@ def scan_directory(root_path, file_sizes=False, max_depth=10):
         "directories": directories,
     }  # type: ScanResult
     return scan_result
-
-
-if __name__ == "__main__":
-    import sys
-
-    try:
-        from rich import print
-    except ImportError:
-        pass
-
-    start = time.time()
-    scan = scan_directory(sys.argv[1])
-    end_time = time.time()
-    print(scan)
-    print(len(scan["directories"]), "directories scanned")
-    print("{:.1f}ms".format((end_time - start) * 1000))
-

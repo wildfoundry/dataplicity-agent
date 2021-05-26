@@ -162,7 +162,7 @@ class App(object):
             m2m_url=self.args.m2m_url,
             serial=self.args.serial,
             auth_token=self.args.auth_token,
-            remote_directory=self.args.remote_directory,
+            remote_directory_path=self.args.remote_directory,
         )
         return client
 
