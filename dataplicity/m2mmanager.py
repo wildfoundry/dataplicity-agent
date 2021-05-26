@@ -91,21 +91,21 @@ class Terminal(object):
 class M2MManager(object):
     """Manages M2M Services."""
 
-    def __init__(self, client, url, identity=None):
+    def __init__(self, client, url, remote_directory, identity=None):
         self.client = client
         self.url = url
         self.identity = identity
         self.terminals = {}
         self.notified_identity = None
-        self.m2m_client = WSClient(self, url)
+        self.m2m_client = WSClient(self, url, remote_directory)
         self.services_limiter = Limiter("services", constants.LIMIT_SERVICES)
         self.terminals_limiter = Limiter("terminals", constants.LIMIT_TERMINALS)
 
     @classmethod
-    def init(cls, client, m2m_url=None):
+    def init(cls, client, remote_directory, m2m_url=None):
         """Set up the m2m manager for Dataplicity."""
         url = m2m_url or constants.M2M_URL
-        manager = cls(client, url)
+        manager = cls(client, url, remote_directory)
         manager.m2m_client.start()
         manager.add_terminal("shell", "bash -i")
         return manager
@@ -191,6 +191,8 @@ class M2MManager(object):
             self.open_file_service(data["port"], data["path"])
         elif action == "run-command":
             self.open_command_service(data["port"], data["command"])
+        elif action == "scan-directory":
+            self.client.directory_scanner.schedule_scan()
         # Unrecognized instructions are ignored
 
     def open_terminal(self, name, port, size=None):

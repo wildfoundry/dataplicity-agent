@@ -79,6 +79,18 @@ class PacketType(IntEnum):
     # Send a route_control packet
     request_send_control = 22
 
+    # Notify client of name # ADDED 15/11/16
+    # notify_name = 23
+
+    # Remote directory files ADDED 25/2/21
+    open_remote_file = 24
+    open_remote_file_result = 25
+    close_remote_file = 26
+    read_remote_file = 27
+    read_remote_file_result = 28
+    scan_remote_directory = 29
+    scan_remote_directory_result = 30
+
     response = 100
 
     command_add_route = 101
@@ -89,7 +101,7 @@ class PacketType(IntEnum):
 
     command_broadcast_log = 104
 
-    #command_forward = 105
+    # command_forward = 105
 
     command_set_name = 106
 
@@ -153,7 +165,7 @@ class RequestIdentifyPacket(M2MPacket):
     """Client requests joining the server with a particular identity."""
 
     type = PacketType.request_identify
-    attributes = [('uuid', bytes)]
+    attributes = [("uuid", bytes)]
 
 
 class WelcomePacket(M2MPacket):
@@ -166,15 +178,14 @@ class LogPacket(M2MPacket):
     """Log information, client may ignore."""
 
     type = PacketType.log
-    attributes = [('text', bytes)]
+    attributes = [("text", bytes)]
 
 
 class RequestSendPacket(M2MPacket):
     """Request to send data to a connection."""
 
     type = PacketType.request_send
-    attributes = [('channel', int_types),
-                  ('data', bytes)]
+    attributes = [("channel", int_types), ("data", bytes)]
 
 
 class KeepAlivePacket(M2MPacket):
@@ -187,38 +198,35 @@ class RoutePacket(M2MPacket):
     """Route data."""
 
     type = PacketType.route
-    attributes = [('channel', int_types),
-                  ('data', bytes)]
+    attributes = [("channel", int_types), ("data", bytes)]
 
 
 class RouteControlPacket(M2MPacket):
     """Route data."""
 
     type = PacketType.route_control
-    attributes = [('channel', int_types),
-                  ('data', bytes)]
+    attributes = [("channel", int_types), ("data", bytes)]
 
 
 class RequestSendControlPacket(M2MPacket):
     """Request to send data to a connection."""
 
     type = PacketType.request_send_control
-    attributes = [('channel', int_types),
-                  ('data', bytes)]
+    attributes = [("channel", int_types), ("data", bytes)]
 
 
 class PingPacket(M2MPacket):
     """Ping packet to check connection."""
 
     type = PacketType.ping
-    attributes = [('data', bytes)]
+    attributes = [("data", bytes)]
 
 
 class PongPacket(M2MPacket):
     """Response to Ping packet."""
 
     type = PacketType.pong
-    attributes = [('data', bytes)]
+    attributes = [("data", bytes)]
 
 
 class SetIdentityPacket(M2MPacket):
@@ -230,50 +238,49 @@ class SetIdentityPacket(M2MPacket):
     """
 
     type = PacketType.set_identity
-    attributes = [('uuid', bytes)]
+    attributes = [("uuid", bytes)]
 
 
 class NotifyOpenPacket(M2MPacket):
     """Let the client know a channel was opened."""
 
     type = PacketType.notify_open
-    attributes = [('channel', int_types)]
+    attributes = [("channel", int_types)]
 
 
 class RequestLoginPacket(M2MPacket):
     """Login for extra privileges."""
 
     type = PacketType.request_login
-    attributes = [('username', bytes),
-                  ('password', bytes)]
+    attributes = [("username", bytes), ("password", bytes)]
 
 
 class NotifyLoginSuccessPacket(M2MPacket):
     """Login success."""
 
     type = PacketType.notify_login_success
-    attributes = [('user', bytes)]
+    attributes = [("user", bytes)]
 
 
 class NotifyLoginFailPacket(M2MPacket):
     """Login failed."""
 
     type = PacketType.notify_login_fail
-    attributes = [('message', bytes)]
+    attributes = [("message", bytes)]
 
 
 class NotifyClosePacket(M2MPacket):
     """channel was closed."""
 
     type = PacketType.notify_close
-    attributes = [('port', int)]
+    attributes = [("port", int)]
 
 
 class RequestClosePacket(M2MPacket):
     """Ask server to close a port."""
 
     type = PacketType.request_close
-    attributes = [('port', int)]
+    attributes = [("port", int)]
 
 
 class RequestLeavePacket(M2MPacket):
@@ -286,47 +293,43 @@ class InstructionPacket(M2MPacket):
     """Send an 'instruction' which is an application define packet not send through a channel."""
 
     type = PacketType.instruction
-    attributes = [('sender', bytes),
-                  ('data', dict)]
+    attributes = [("sender", bytes), ("data", dict)]
 
 
 class CommandResponsePacket(M2MPacket):
     """Sent in response to a command."""
 
     type = PacketType.response
-    attributes = [('command_id', int_types),
-                  ('result', dict)]
+    attributes = [("command_id", int_types), ("result", dict)]
 
 
 class CommandAddRoutePacket(M2MPacket):
     """Command the server to generate a route from uuid1 to uuid2."""
 
     type = PacketType.command_add_route
-    attributes = [('command_id', int_types),
-                  ('node1', bytes),
-                  ('port1', int_types),
-                  ('node2', bytes),
-                  ('port2', int_types),
-                  ('requester', bytes),
-                  ('forwarded', int_types)]
+    attributes = [
+        ("command_id", int_types),
+        ("node1", bytes),
+        ("port1", int_types),
+        ("node2", bytes),
+        ("port2", int_types),
+        ("requester", bytes),
+        ("forwarded", int_types),
+    ]
 
 
 class CommandSendInstructionPacket(M2MPacket):
     """Send an instruction to a client."""
 
     type = PacketType.command_send_instruction
-    attributes = [('command_id', int_types),
-                  ('node', bytes),
-                  ('data', dict)]
+    attributes = [("command_id", int_types), ("node", bytes), ("data", dict)]
 
 
 class CommandLogPacket(M2MPacket):
     """Send a message to be written to the logs."""
 
     type = PacketType.command_log
-    attributes = [('command_id', int_types),
-                  ('node', bytes),
-                  ('text', bytes)]
+    attributes = [("command_id", int_types), ("node", bytes), ("text", bytes)]
 
 
 class CommandBroadcastLogPacket(M2MPacket):
@@ -334,102 +337,156 @@ class CommandBroadcastLogPacket(M2MPacket):
 
     # Probably just for debug. Not sure what would happen with 1000s of clients
     type = PacketType.command_broadcast_log
-    attributes = [('command_id', int_types),
-                  ('text', bytes)]
+    attributes = [("command_id", int_types), ("text", bytes)]
 
 
 class CommandSetName(M2MPacket):
     """Set an alternative name of a node."""
 
     type = PacketType.command_set_name
-    attributes = [('command_id', int_types),
-                  ('node', bytes),
-                  ('name', bytes)]
+    attributes = [("command_id", int_types), ("node", bytes), ("name", bytes)]
 
 
 class CommandCheckNodes(M2MPacket):
     """Get identities from a list of names."""
 
     type = PacketType.command_check_nodes
-    attributes = [('command_id', int_types),
-                  ('nodes', list)]
+    attributes = [("command_id", int_types), ("nodes", list)]
 
 
 class CommandGetIdentities(M2MPacket):
     """Get identities from a list of names."""
 
     type = PacketType.command_get_identities
-    attributes = [('command_id', int_types),
-                  ('nodes', list)]
+    attributes = [("command_id", int_types), ("nodes", list)]
 
 
 class CommandSetAuth(M2MPacket):
     """Set auth information."""
 
     type = PacketType.command_set_auth
-    attributes = [('command_id', int_types),
-                  ('expire', int_types),
-                  ('value', bytes)]
+    attributes = [("command_id", int_types), ("expire", int_types), ("value", bytes)]
 
 
 class CommandSetMeta(M2MPacket):
     """Set a meta key/value associated with a node."""
 
     type = PacketType.command_set_meta
-    attributes = [('command_id', int_types),
-                  ('requester', bytes),
-                  ('node', bytes),
-                  ('key', bytes),
-                  ('value', bytes)]
+    attributes = [
+        ("command_id", int_types),
+        ("requester", bytes),
+        ("node", bytes),
+        ("key", bytes),
+        ("value", bytes),
+    ]
 
 
 class CommandGetMeta(M2MPacket):
     """Get a dictionary of meta values associated with a node."""
 
     type = PacketType.command_get_meta
-    attributes = [('command_id', int_types),
-                  ('requester', bytes),
-                  ('node', bytes)]
+    attributes = [("command_id", int_types), ("requester", bytes), ("node", bytes)]
 
 
 class PeerAddRoutePacket(M2MPacket):
     """Tell the peer cluster about a route."""
 
     type = PacketType.peer_add_route
-    attributes = [('command_id', int),
-                  ('requester', bytes),
-                  ('node1', bytes),
-                  ('port1', int_types),
-                  ('node2', bytes),
-                  ('port2', int_types)]
+    attributes = [
+        ("command_id", int),
+        ("requester", bytes),
+        ("node1", bytes),
+        ("port1", int_types),
+        ("node2", bytes),
+        ("port2", int_types),
+    ]
 
 
 class PeerForwardPacket(M2MPacket):
     """Forward a packet to another node."""
 
     type = PacketType.peer_forward
-    attributes = [('recipient', bytes),
-                  ('packet', bytes)]
+    attributes = [("recipient", bytes), ("packet", bytes)]
 
 
 class PeerNotifyDisconnect(M2MPacket):
     """Tell the peer cluster a client disconnected."""
 
     type = PacketType.peer_notify_disconnect
-    attributes = [('node', bytes)]
+    attributes = [("node", bytes)]
 
 
 class PeerNotifyName(M2MPacket):
     """Notify peer(s) about a named connection."""
 
     type = PacketType.peer_notify_name
-    attributes = [('node', bytes),
-                  ('name', bytes)]
+    attributes = [("node", bytes), ("name", bytes)]
 
 
 class PeerClosePort(M2MPacket):
     """Tell peer about a closed port."""
 
     type = PacketType.peer_close_port
-    attributes = [('node', bytes),
-                  ('port', int)]
+    attributes = [("node", bytes), ("port", int)]
+
+
+class OpenRemoteFile(M2MPacket):
+    """Server requests opening a remote file."""
+
+    type = PacketType.open_remote_file
+    attributes = [("upload_id", bytes), ("path", bytes)]
+
+
+class OpenRemoteFileResult(M2MPacket):
+    """Tell server about the opening of a remote file."""
+
+    type = PacketType.open_remote_file_result
+    attributes = [
+        ("upload_id", bytes),
+        ("size", int),
+        ("fail", int),
+        ("fail_reason", bytes),
+    ]
+
+
+class CloseRemoteFile(M2MPacket):
+    """Server requests close of remote file."""
+
+    type = PacketType.close_remote_file
+    attributes = [("upload_id", bytes)]
+
+
+class ReadRemoteFile(M2MPacket):
+    """Server requests read from remote file."""
+
+    type = PacketType.read_remote_file
+    attributes = [("upload_id", bytes), ("offset", int), ("size", int)]
+
+
+class ReadRemoteFileResult(M2MPacket):
+    """Tell server about result of read."""
+
+    type = PacketType.read_remote_file_result
+    attributes = [
+        ("upload_id", bytes),
+        ("offset", int),
+        ("size", int),
+        ("data", bytes),
+        ("fail", int),
+        ("fail_reason", bytes),
+    ]
+
+
+class ScanRemoteDirectory(M2MPacket):
+    """Server wants us to rescan the remote directory."""
+
+    type = PacketType.scan_remote_directory
+    attributes = []
+
+
+class ScanRemoteDirectoryResult(M2MPacket):
+    """Inform server about result of directory scan."""
+
+    type = PacketType.scan_remote_directory_result
+    attributes = [("error", bytes)]
+

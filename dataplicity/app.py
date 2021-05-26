@@ -96,6 +96,14 @@ class App(object):
             help="Set Dataplicity auth token",
         )
 
+        parser.add_argument(
+            "--remote-dir",
+            dest="remote_directory",
+            metavar="PATH",
+            default=None,
+            help="Set remote directory location",
+        )
+
         subparsers = parser.add_subparsers(
             title="available sub-commands", dest="subcommand", help="sub-command help"
         )
@@ -154,6 +162,7 @@ class App(object):
             m2m_url=self.args.m2m_url,
             serial=self.args.serial,
             auth_token=self.args.auth_token,
+            remote_directory_path=self.args.remote_directory,
         )
         return client
 
