@@ -443,7 +443,7 @@ class OpenRemoteFileResult(M2MPacket):
     type = PacketType.open_remote_file_result
     attributes = [
         ("upload_id", bytes),
-        ("size", int),
+        ("size", int_types),
         ("fail", int),
         ("fail_reason", bytes),
     ]

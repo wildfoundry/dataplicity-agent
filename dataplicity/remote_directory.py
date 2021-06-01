@@ -116,7 +116,7 @@ class RemoteDirectory(object):
 
         try:
             disk_usage = disk_tools.disk_usage(self.temp_path)
-            file_size = snapshot_size = os.path.getsize(file_path)
+            file_size = os.path.getsize(file_path)
         except Exception as error:
             # Don't want to fail here, probably worth honoring the request
             log.warning("failed to get disk usage information; %s", error)
