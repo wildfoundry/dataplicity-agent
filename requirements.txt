@@ -1,6 +1,5 @@
 backports.ssl-match-hostname==3.4.0.2
 enum34==1.1.6
 lomond==0.3.3
-scandir==1.10.0
 six==1.10.0
 typing==3.7.4.3

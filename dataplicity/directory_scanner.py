@@ -63,7 +63,7 @@ class DirectoryScanner(Thread):
                 log.debug("Performing on-demand scan")
                 # On demand scans include file sizes
                 try:
-                    self.perform_scan()
+                    self._perform_scan()
                 except Exception:
                     # errors have been logged
                     pass
@@ -74,7 +74,7 @@ class DirectoryScanner(Thread):
                 # Regular scans don't include file sizes as it would likely increase data usage
                 # due to files changing sizes from scan to scan
                 try:
-                    self.perform_scan()
+                    self._perform_scan()
                 except Exception:
                     # errors have been logged
                     pass
@@ -86,22 +86,31 @@ class DirectoryScanner(Thread):
 
     def perform_scan(self, file_sizes=True):
         # type: (bool) -> None
+        """Perform a scan in the background."""
+        thread = Thread(target=self._perform_scan, kwargs={"file_sizes": file_sizes})
+        thread.start()
+
+    def _perform_scan(self, file_sizes=True):
+        # type: (bool) -> None
         """Scan and upload directory structure."""
-        try:
-            with self._lock:
-                directory = scan_directory(self.root_path, file_sizes=file_sizes)
-        except ScanDirectoryError as error:
-            log.warning(str(error))
-            raise
-        except Exception:
-            log.exception("failed to scan directory %s", self.root_path)
-            raise
-        else:
+        with self._lock:
             try:
-                self.upload_directory(directory, file_sizes=file_sizes)
-            except Exception:
-                log.exception("failed to upload directory")
+                start_time = time()
+                directory = scan_directory(self.root_path, file_sizes=file_sizes)
+                elapsed = time() - start_time
+                log.debug("scan directory elapsed %.1f", elapsed * 1000)
+            except ScanDirectoryError as error:
+                log.warning(str(error))
                 raise
+            except Exception:
+                log.exception("failed to scan directory %s", self.root_path)
+                raise
+            else:
+                try:
+                    self.upload_directory(directory, file_sizes=file_sizes)
+                except Exception:
+                    log.exception("failed to upload directory")
+                    raise
 
     def upload_directory(self, directory, file_sizes=False):
         # type: (ScanResult, bool) -> None

@@ -6,14 +6,48 @@ import os
 import os.path
 import time
 
+from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple, TypedDict
+
+
 try:
     # Scandir from stdlib in Python3
     from os import DirEntry, scandir
 except ImportError:
-    # scandir from pypy on Python 2.7
-    from scandir import DirEntry, scandir
+    # Can't import scandir, so we will implement as much as we need
+    # This will be less efficient, but will work
 
-from typing import Dict, Iterable, List, Optional, Set, Tuple, Union, TypedDict
+    from os.path import join
+    from stat import S_ISDIR
+
+    class DirEntry(object):  # type: ignore
+        def __init__(self, path):
+            # type(str) -> None
+            self.path = path
+            self.name = os.path.basename(self.path)
+            self._stat = None
+
+        def stat(self):
+            # type() -> os.stat_result
+            if self._stat is None:
+                self._stat = os.stat(self.path)
+            return self._stat
+
+        def is_dir(self):
+            # type: () -> bool
+            return S_ISDIR(self.stat().st_mode)
+
+        def is_file(self):
+            # type: () -> bool
+            return not S_ISDIR(self.stat().st_mode)
+
+        def inode(self):
+            # type: () -> int
+            return self.stat().st_ino
+
+    def scandir(dir_path):  # type: ignore
+        # type(str) > Iterator[DirEntry]
+        return iter(DirEntry(join(dir_path, path)) for path in os.listdir(dir_path))
+
 
 FileInfo = Tuple[str, int]
 DirectoryDict = TypedDict(
