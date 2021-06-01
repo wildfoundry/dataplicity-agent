@@ -12,10 +12,8 @@ rm -f bin/dataplicity
 rm -rf .build
 virtualenv -qq .build -p python3
 source .build/bin/activate
-pip -q install pex==2.1.42 subprocess32 scandir
+pip -q install pex==2.1.21 subprocess32
 echo building ./bin/dataplicity
-pex dataplicity==$(python dataplicity/_version.py) --pre --python-shebang="#!/usr/bin/env python"\
-    --python=$(which python2) --python=$(which python3) \    
-    -r requirements.txt -o bin/dataplicity -m dataplicity.app:main
+pex dataplicity==$(python dataplicity/_version.py) --pre --python-shebang="#!/usr/bin/env python" --python=$(which python2) --python=$(which python3) -r requirements.txt -o bin/dataplicity -m dataplicity.app:main
 deactivate
 echo built dataplicity agent v$(./bin/dataplicity version)
