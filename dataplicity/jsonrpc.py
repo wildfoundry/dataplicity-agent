@@ -7,7 +7,7 @@ import logging
 from .compat import urlopen, text_type
 
 
-log = logging.getLogger('agent')
+log = logging.getLogger("agent")
 
 
 class ProtocolError(Exception):
@@ -31,6 +31,7 @@ class InvalidResponseError(ProtocolError):
 
 class JSONRPCError(Exception):
     """Base class for exceptions returned from the server"""
+
     def __init__(self, method, code, data, message):
         self.method = method
         self.code = code
@@ -56,11 +57,13 @@ class ErrorCode(object):
     invalid_params = -32602
     internal_error = -32603
 
-    to_str = {-32700: "Parse error",
-              -32600: "Invalid Request",
-              -32601: "Method not found",
-              -32602: "Invalid params",
-              -32603: "Internal error"}
+    to_str = {
+        -32700: "Parse error",
+        -32600: "Invalid Request",
+        -32601: "Method not found",
+        -32602: "Invalid params",
+        -32603: "Internal error",
+    }
 
 
 class Batch(object):
@@ -102,24 +105,19 @@ class Batch(object):
             "jsonrpc": "2.0",
             "method": method,
             "params": params,
-            "id": self.client.new_call_id()
+            "id": self.client.new_call_id(),
         }
         self.calls.append(call)
-        self.methods[call['id']] = method
+        self.methods[call["id"]] = method
 
     def call_with_id(self, call_id, method, **params):
         """Add a call to the batch with a supplied id."""
         if call_id in self.ids_used:
             raise ValueError("duplicate call id in batch")
-        call = {
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params,
-            "id": call_id
-        }
+        call = {"jsonrpc": "2.0", "method": method, "params": params, "id": call_id}
         self.calls.append(call)
         self.ids_used.add(call_id)
-        self.methods[call['id']] = method
+        self.methods[call["id"]] = method
 
     def notify(self, method, **params):
         call = {
@@ -137,15 +135,16 @@ class Batch(object):
         if not isinstance(response, list):
             raise ProtocolError("Expected a list of response from the server")
 
-        self.responses = [(r.get('error', None), r.get('result', None))
-                          for r in response]
-        self.errors = {r['id']: r['error'] for r in response if 'error' in r}
-        self.results = {r['id']: r for r in response if 'id' in r and 'error' not in r}
+        self.responses = [
+            (r.get("error", None), r.get("result", None)) for r in response
+        ]
+        self.errors = {r["id"]: r["error"] for r in response if "error" in r}
+        self.results = {r["id"]: r for r in response if "id" in r and "error" not in r}
 
     def get_result(self, call_id, default=Ellipsis):
         """Get a result from the batch, potentially raising rpc errors."""
         if call_id in self.results:
-            return self.results[call_id].get('result', None)
+            return self.results[call_id].get("result", None)
         elif call_id in self.errors:
             if default is Ellipsis:
                 self.client._handle_error(self.methods[call_id], self.errors[call_id])
@@ -181,58 +180,53 @@ class JSONRPC(object):
         call_json = json.dumps(call)
         # Py2 returns bytes, Py3 returns unicode str
         if isinstance(call_json, text_type):
-            call_json = call_json.encode('utf-8')
+            call_json = call_json.encode("utf-8")
+        log.debug("JSONRPC request %i Kb", len(call_json) // 1000)
         url_file = None
         try:
             try:
                 url_file = urlopen(self.url, call_json)
-                response_json = url_file.read().decode('utf-8')
+                response_json = url_file.read().decode("utf-8")
             finally:
                 if url_file is not None:
                     url_file.close()
         except Exception as e:
             raise ServerUnreachableError(self.url, e)
         log.debug(response_json[:1000])
+
         return response_json
 
     def call(self, method, **params):
         """Call a remote method."""
         call_id = self.new_call_id()
-        call = {
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params,
-            "id": call_id
-        }
+        call = {"jsonrpc": "2.0", "method": method, "params": params, "id": call_id}
         response_json = self._send(call)
         try:
             response = json.loads(response_json)
         except:
-            log.error('unable to decode %s', repr(response_json)[:100])
-            raise InvalidResponseError('unable to decode response as JSON')
+            log.error("unable to decode %s", repr(response_json)[:100])
+            raise InvalidResponseError("unable to decode response as JSON")
 
-        if 'jsonrpc' not in response or 'id' not in response:
+        if "jsonrpc" not in response or "id" not in response:
             raise ProtocolError("Invalid response from server")
 
-        if response['jsonrpc'] != '2.0':
+        if response["jsonrpc"] != "2.0":
             raise ProtocolError("Client only understands JSONRPC v2.0")
 
-        if response['id'] != call_id:
-            raise ProtocolError("Invalid response from the server, 'id' field does not match")
+        if response["id"] != call_id:
+            raise ProtocolError(
+                "Invalid response from the server, 'id' field does not match"
+            )
 
-        if 'error' in response:
-            error = response['error']
+        if "error" in response:
+            error = response["error"]
             self._handle_error(method, error)
 
-        return response.get('result', None)
+        return response.get("result", None)
 
     def notify(self, method, **params):
         """Send a notification to the server."""
-        notify = {
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params
-        }
+        notify = {"jsonrpc": "2.0", "method": method, "params": params}
         self._send(notify)
 
     def batch(self):
@@ -240,13 +234,18 @@ class JSONRPC(object):
         return Batch(self)
 
     def _handle_error(self, method, error):
-        code = error.get('code')
+        code = error.get("code")
         if code in ErrorCode.to_str:
-            raise RemoteError(method,
-                              code,
-                              error.get('data', None),
-                              error.get('message', ErrorCode.to_str[code]))
-        raise RemoteMethodError(method,
-                                code,
-                                error.get('data', None),
-                                error.get('message', self.unknown_error_msg))
+            raise RemoteError(
+                method,
+                code,
+                error.get("data", None),
+                error.get("message", ErrorCode.to_str[code]),
+            )
+        raise RemoteMethodError(
+            method,
+            code,
+            error.get("data", None),
+            error.get("message", self.unknown_error_msg),
+        )
+

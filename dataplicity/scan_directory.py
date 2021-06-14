@@ -136,23 +136,37 @@ def scan_directory(root_path, file_sizes=False, max_depth=10):
         if dir_entry.name.startswith("."):
             # Exclude hidden files and directories
             continue
-        if dir_entry.is_dir():
+        try:
+            is_dir = dir_entry.is_dir()
+        except Exception:
+            is_dir = False
+
+        try:
+            is_file = dir_entry.is_file()
+        except Exception:
+            is_file = False
+            
+        if is_dir:
             if max_depth is not None and len(stack) >= max_depth:
                 # Max depth reached, so skip this dir
                 continue
-            inode = dir_entry.inode()
-            if inode in visited_directories:
-                # We have visited this directory before, we must have a recursive link
-                continue
-            directories[path].setdefault("dirs", []).append(dir_entry.name)
-            visited_directories.add(inode)
+            try:
+                inode = dir_entry.inode()
+            except Exception as error:
+                log.warning("error in inode; %r", error)
+            else:
+                if inode in visited_directories:
+                    # We have visited this directory before, we must have a recursive link
+                    continue
+                directories[path].setdefault("dirs", []).append(dir_entry.name)
+                visited_directories.add(inode)
             push_directory(join(path, dir_entry.name))
-        elif dir_entry.is_file():
-            file_info = (
-                (dir_entry.name, dir_entry.stat().st_size)
-                if file_sizes
-                else (dir_entry.name, -1)
-            )
+        elif is_file:
+            try:
+                size = dir_entry.stat().st_size
+            except Exception:
+                size = -1
+            file_info = (dir_entry.name, size) if file_sizes else (dir_entry.name, -1)
             directories[path].setdefault("files", []).append(file_info)
 
     scan_result = {
