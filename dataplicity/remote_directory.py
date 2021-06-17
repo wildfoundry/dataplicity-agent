@@ -111,11 +111,14 @@ class RemoteDirectory(object):
             int: The size of the snapshot file (in bytes)
         """
 
-        if path == "\0scan":
-            # Special file served from temp
-            file_path = os.path.join(
-                tempfile.gettempdir(), "__dataplicity_remote_directory_scan___.json"
-            )
+        if path.startswith("\0"):
+            if path == "\0scan.json":
+                # Special file served from temp
+                file_path = os.path.join(
+                    tempfile.gettempdir(), "__dataplicity_remote_directory_scan___.json"
+                )
+            else:
+                raise IllegalPath("Unknown special path; %r" % path)
         else:
             # Regular file in remote directory
             file_path = os.path.join(self.path, path.lstrip("/"))
