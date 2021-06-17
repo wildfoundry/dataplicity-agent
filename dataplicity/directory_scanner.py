@@ -1,12 +1,16 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import json
 import logging
+import os.path
 import random
 from time import time
+import tempfile
 from threading import Event, RLock, Thread
 from typing import Optional
 
+from .compat import binary_type, text_type
 from .scan_directory import scan_directory, ScanResult, ScanDirectoryError
 from . import jsonrpc
 
@@ -107,10 +111,24 @@ class DirectoryScanner(Thread):
                 raise
             else:
                 try:
-                    self.upload_directory(directory, file_sizes=file_sizes)
+                    self.write_scan(directory)
                 except Exception:
-                    log.exception("failed to upload directory")
+                    log.exception("failed to write_scan")
                     raise
+
+    def write_scan(self, directory):
+        # type: (ScanResult) -> None
+        """Save the scan to tmp."""
+
+        scan_json = json.dumps(directory)
+        if isinstance(scan_json, text_type):
+            scan_json = scan_json.encode("utf-8")
+
+        file_path = os.path.join(
+            tempfile.gettempdir(), "__dataplicity_remote_directory_scan___.json"
+        )
+        with open(file_path, "wb") as scan_file:
+            scan_file.write(scan_json)
 
     def upload_directory(self, directory, file_sizes=False):
         # type: (ScanResult, bool) -> None

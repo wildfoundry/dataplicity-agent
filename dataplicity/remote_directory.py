@@ -10,6 +10,7 @@ if typing.TYPE_CHECKING:
 
 from . import disk_tools
 from .directory_scanner import DirectoryScanner
+from .scan_directory import scan_directory
 from .m2m.packets import PacketType
 from .m2m.wsclient import WSClient
 
@@ -109,10 +110,18 @@ class RemoteDirectory(object):
         Returns:
             int: The size of the snapshot file (in bytes)
         """
-        file_path = os.path.join(self.path, path.lstrip("/"))
 
-        if not validate_path(file_path) or not file_path.startswith(self.path):
-            raise IllegalPath("Path %s is illegal" % file_path)
+        if path == "\0scan":
+            # Special file served from temp
+            file_path = os.path.join(
+                tempfile.gettempdir(), "__dataplicity_remote_directory_scan___.json"
+            )
+        else:
+            # Regular file in remote directory
+            file_path = os.path.join(self.path, path.lstrip("/"))
+
+            if not validate_path(file_path) or not file_path.startswith(self.path):
+                raise IllegalPath("Path %s is illegal" % file_path)
 
         try:
             disk_usage = disk_tools.disk_usage(self.temp_path)
