@@ -29,7 +29,11 @@ class PacketMeta(type):
         packet_cls = super(PacketMeta, mcs).__new__(mcs, name, bases, attrs)
         if bases[0] is not object:
             if packet_cls.type >= 0:
-                assert packet_cls.type not in packet_cls.registry, "packet type {!r} has already been registered".format(packet_cls, type)
+                assert (
+                    packet_cls.type not in packet_cls.registry
+                ), "packet type {!r} has already been registered".format(
+                    packet_cls, type
+                )
                 packet_cls.registry[packet_cls.type] = packet_cls
         return packet_cls
 
@@ -58,16 +62,15 @@ class PacketBaseType(object):
                 continue
 
         def summarize(key, value):
-            if key == 'password':
-                return '********'
+            if key == "password":
+                return "********"
             if isinstance(value, binary_type) and len(value) > 32:
                 remaining = len(value) - 32
                 return "{!r} + {} bytes".format(value[:32], remaining)
             return repr(value)
 
-        params = ', '.join(
-            "{}={}".format(k, summarize(k, v))
-            for k, v in sorted(data.items())
+        params = ", ".join(
+            "{}={}".format(k, summarize(k, v)) for k, v in sorted(data.items())
         )
         return "{}({})".format(self.__class__.__name__, params)
 
@@ -79,7 +82,7 @@ class PacketBaseType(object):
         """Dynamically create a packet from its type and parameters."""
         packet_cls = cls.registry.get(cls.process_packet_type(packet_type))
         if packet_cls is None:
-            raise ValueError('no packet type {}'.format(packet_type))
+            raise ValueError("no packet type {}".format(packet_type))
         return packet_cls(*args, **kwargs)
 
     @classmethod
@@ -88,13 +91,13 @@ class PacketBaseType(object):
         try:
             packet_data = bencode.decode(packet_bytes)
         except bencode.DecodeError as e:
-            raise PacketFormatError('packet is badly formated ({!r})'.format(e))
+            raise PacketFormatError("packet is badly formated ({!r})".format(e))
 
         if not isinstance(packet_data, list):
-            raise PacketFormatError('packet must be a list')
+            raise PacketFormatError("packet must be a list")
         packet_type = packet_data[0]
         if not isinstance(packet_type, int_types):
-            raise PacketFormatError('first value must be an integer')
+            raise PacketFormatError("first value must be an integer")
         packet_body = packet_data[1:]
         try:
             packet_cls = cls.registry[packet_type]
@@ -112,8 +115,10 @@ class PacketBaseType(object):
 
     @property
     def kwargs(self):
-        return {attrib_name: getattr(self, attrib_name)
-                for attrib_name, attrib_type in self.attributes}
+        return {
+            attrib_name: getattr(self, attrib_name)
+            for attrib_name, attrib_type in self.attributes
+        }
 
     def get_method_args(self, arg_count):
         args = []
@@ -130,19 +135,25 @@ class PacketBaseType(object):
 
         for arg, (attribute_name, attrib_type) in zip(args, self.attributes):
             if isinstance(arg, text_type):
-                arg = arg.encode('utf-8')
+                arg = arg.encode("utf-8")
             params[attribute_name] = arg
         for k, v in kwargs.items():
             if isinstance(v, text_type):
-                v = v.encode('utf-8')
+                v = v.encode("utf-8")
             params[k] = v
 
         for attrib_name, attrib_type in self.attributes:
             if attrib_name not in params:
-                raise PacketFormatError("missing attribute '{}', in {!r}".format(attrib_name, self))
+                raise PacketFormatError(
+                    "missing attribute '{}', in {!r}".format(attrib_name, self)
+                )
             value = params[attrib_name]
             if attrib_type is not None and not isinstance(value, attrib_type):
-                raise PacketFormatError("parameter '{}' should be a {!r}, in {!r} (not {!r})".format(attrib_name, attrib_type, self, type(value)))
+                raise PacketFormatError(
+                    "parameter '{}' should be a {!r}, in {!r} (not {!r})".format(
+                        attrib_name, attrib_type, self, type(value)
+                    )
+                )
             setattr(self, attrib_name, params[attrib_name])
 
     def validate(self):
@@ -160,8 +171,9 @@ class PacketBaseType(object):
 
     def encode(self):
         """Encode the packet (including type header)."""
-        data = ([int(self.type)] +
-                [getattr(self, attrib_name) for attrib_name, attrib_type in self.attributes])
+        data = [int(self.type)] + [
+            getattr(self, attrib_name) for attrib_name, attrib_type in self.attributes
+        ]
         return data
 
 

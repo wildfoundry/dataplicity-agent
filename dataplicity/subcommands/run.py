@@ -6,6 +6,7 @@ from ..subcommand import SubCommand
 
 class Run(SubCommand):
     """Run the dataplicity service in the foreground"""
+
     help = """Run dataplicity agent"""
 
     def run(self):

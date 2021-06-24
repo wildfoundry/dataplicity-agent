@@ -54,7 +54,8 @@ DirectoryDict = TypedDict(
     "DirectoryDict", {"files": List[FileInfo], "dirs": List[str]}, total=False
 )
 ScanResult = TypedDict(
-    "ScanResult", {"root": str, "time": float, "directories": Dict[str, DirectoryDict]},
+    "ScanResult",
+    {"root": str, "time": float, "directories": Dict[str, DirectoryDict]},
 )
 _ScanStackEntry = Tuple[str, Iterable[DirEntry]]
 
@@ -69,7 +70,7 @@ def scan_directory(root_path, file_sizes=False, max_depth=10):
     # type: (str, bool, Optional[int]) -> ScanResult
     """Scan and serialize directory structure.
 
-    Uses scandir to do this quite efficiently (without code recursion). Recursive links 
+    Uses scandir to do this quite efficiently (without code recursion). Recursive links
     are detected and omitted.
 
     Returns a dict in the following format.
@@ -82,7 +83,7 @@ def scan_directory(root_path, file_sizes=False, max_depth=10):
                 "dirs" (optional): [<str: NAME>, ...],
                 "files" (optional): [
                     (<str: NAME>, <int: FILESIZE>),
-                    ...                    
+                    ...
                 ]
             },
             ...
@@ -145,7 +146,7 @@ def scan_directory(root_path, file_sizes=False, max_depth=10):
             is_file = dir_entry.is_file()
         except Exception:
             is_file = False
-            
+
         if is_dir:
             if max_depth is not None and len(stack) >= max_depth:
                 # Max depth reached, so skip this dir

@@ -59,4 +59,3 @@ if __name__ == "__main__":
     # python -m dataplicity.iptools
     for name, ip in get_all_interfaces():
         print("{}\t{}".format(name, ip))
-

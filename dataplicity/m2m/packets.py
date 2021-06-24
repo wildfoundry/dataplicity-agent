@@ -489,4 +489,3 @@ class ScanRemoteDirectoryResult(M2MPacket):
 
     type = PacketType.scan_remote_directory_result
     attributes = [("error", bytes)]
-

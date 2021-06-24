@@ -264,4 +264,3 @@ class RemoteDirectory(object):
                 fail=0,
                 fail_reason="",
             )
-

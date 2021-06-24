@@ -125,4 +125,3 @@ def with_metaclass(meta, *bases):
             return meta(name, bases, d)
 
     return metaclass("temporary_class", None, {})
-

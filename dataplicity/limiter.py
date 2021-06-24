@@ -59,8 +59,8 @@ class Limiter(object):
 
     def increment(self):
         """Increment the count.
-        
-        Raises a LimitReached exception if the increment would go above the limit.        
+
+        Raises a LimitReached exception if the increment would go above the limit.
         """
         with self._lock:
             if self._value >= self._limit:
@@ -79,4 +79,3 @@ class Limiter(object):
                 raise LimiterError("Counter can't be decremented below 0")
             self._value -= 1
             log.debug("%r decremented", self)
-

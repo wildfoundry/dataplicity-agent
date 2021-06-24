@@ -9,6 +9,7 @@ import sys
 
 class Version(SubCommand):
     """Write version to stdout."""
+
     help = """Write version to stdout."""
 
     def run(self):

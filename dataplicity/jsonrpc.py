@@ -248,4 +248,3 @@ class JSONRPC(object):
             error.get("data", None),
             error.get("message", self.unknown_error_msg),
         )
-

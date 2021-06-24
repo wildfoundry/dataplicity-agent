@@ -1,18 +1,17 @@
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import print_function, unicode_literals
 
 import json
 import logging
 import os.path
 import random
-from time import time
 import tempfile
 from threading import Event, RLock, Thread
+from time import time
 from typing import Optional
 
-from .compat import binary_type, text_type
-from .scan_directory import scan_directory, ScanResult, ScanDirectoryError
 from . import jsonrpc
+from .compat import text_type
+from .scan_directory import ScanDirectoryError, ScanResult, scan_directory
 
 log = logging.getLogger("agent")
 
@@ -20,7 +19,9 @@ log = logging.getLogger("agent")
 class DirectoryScanner(Thread):
     """Periodically scans and uploads directory information."""
 
-    def __init__(self, exit_event, root_path, rpc, serial, auth_token, period=60 * 60):
+    def __init__(
+        self, exit_event, root_path, rpc, serial, auth_token, period=48 * 60 * 60
+    ):
         # type: (Event, str, jsonrpc.JSONRPC, str, str, float) -> None
         """Create directory Scanner.
 
