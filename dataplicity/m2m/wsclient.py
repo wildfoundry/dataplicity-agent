@@ -471,9 +471,12 @@ class WSClient(threading.Thread):
     def on_scan_remote_directory(self, packet_type):
         # type: (PacketType) -> None
         """Server requests a scan of the remote directory."""
+
+        def on_success():
+            self.send("scan_remote_directory_result", "")
+
         try:
-            self.remote_directory.scan()
+            self.remote_directory.scan(on_success=on_success)
         except Exception as error:
             self.send("scan_remote_directory_result", str(error))
-        else:
-            self.send("scan_remote_directory_result", "")
+

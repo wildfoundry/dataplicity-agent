@@ -3,11 +3,10 @@ from __future__ import print_function, unicode_literals
 import json
 import logging
 import os.path
-import random
 import tempfile
-from threading import Event, RLock, Thread
+from threading import RLock, Thread
 from time import time
-from typing import Optional
+from typing import Callable
 
 from . import jsonrpc
 from .compat import text_type
@@ -16,87 +15,31 @@ from .scan_directory import ScanDirectoryError, ScanResult, scan_directory
 log = logging.getLogger("agent")
 
 
-class DirectoryScanner(Thread):
+class DirectoryScanner(object):
     """Periodically scans and uploads directory information."""
 
-    def __init__(
-        self, exit_event, root_path, rpc, serial, auth_token, period=48 * 60 * 60
-    ):
-        # type: (Event, str, jsonrpc.JSONRPC, str, str, float) -> None
+    def __init__(self, root_path):
+        # type: (str) -> None
         """Create directory Scanner.
 
-        Args:
-            exit_event (Event): Event set when client is exiting.
-            root_path (str): Root of scan.
-            rpc (JSONRPC instance): RPC object.
-            serial (str): Device serial.
-            auth_token (str): Device auth token.
-            period (int, optional): Delay between regular scans (in seconds). Defaults to 60*60 (hour).
+        Args:            
+            root_path (str): Root of scan.            
         """
-        self.exit_event = exit_event
         self.root_path = root_path
-        self.rpc = rpc
-        self.serial = serial
-        self.auth_token = auth_token
-        self.period = period
-        self.previous_scan = None  # type: Optional[ScanResult]
-        self.scan_event = Event()
+
         self._lock = RLock()
-        super(DirectoryScanner, self).__init__()
-        self.daemon = True
 
-    def run(self):
-        # type: () -> None
-        """Use the exit event to sleep until its time for a scan"""
-        log.info("Starting directory scanner for %s", self.root_path)
-        # Small random delay on startup to avoid devices synchronizing
-        if self.exit_event.wait(random.randint(5, 15)):
-            # Client must have exited while we were waiting
-            return
-        # Run first scan on startup
-        self.perform_scan()
-        # Perform scans at regular intervals
-        scan_time = time() + self.period
-
-        while not self.exit_event.is_set():
-            if self.scan_event.wait(5):
-                if self.exit_event.is_set():
-                    # Client has exited while waiting for scan event
-                    break
-                # schedule_scan has been called in other thread
-                self.scan_event.clear()
-                log.debug("Performing on-demand scan")
-                # On demand scans include file sizes
-                try:
-                    self._perform_scan()
-                except Exception:
-                    # errors have been logged
-                    pass
-            elif time() >= scan_time:
-                # Regularly scheduled scan
-                scan_time += self.period
-                log.debug("Performing regular scan")
-                # Regular scans don't include file sizes as it would likely increase data usage
-                # due to files changing sizes from scan to scan
-                try:
-                    self._perform_scan()
-                except Exception:
-                    # errors have been logged
-                    pass
-
-    def schedule_scan(self):
-        # type: () -> None
-        """Immediately perform scan in thread."""
-        self.scan_event.set()
-
-    def perform_scan(self, file_sizes=True):
-        # type: (bool) -> None
+    def perform_scan(self, file_sizes=True, on_success=None):
+        # type: (bool, Callable[[], None]) -> None
         """Perform a scan in the background."""
-        thread = Thread(target=self._perform_scan, kwargs={"file_sizes": file_sizes})
+        thread = Thread(
+            target=self._perform_scan,
+            kwargs={"file_sizes": file_sizes, "on_success": on_success},
+        )
         thread.start()
 
-    def _perform_scan(self, file_sizes=True):
-        # type: (bool) -> None
+    def _perform_scan(self, file_sizes=True, on_success=None):
+        # type: (bool, Callable[], None) -> None
         """Scan and upload directory structure."""
         with self._lock:
             try:
@@ -116,6 +59,12 @@ class DirectoryScanner(Thread):
                 except Exception:
                     log.exception("failed to write_scan")
                     raise
+                else:
+                    if on_success is not None:
+                        try:
+                            on_success()
+                        except Exception:
+                            log.exception("error in on_success")
 
     def write_scan(self, directory):
         # type: (ScanResult) -> None
@@ -130,41 +79,3 @@ class DirectoryScanner(Thread):
         )
         with open(file_path, "wb") as scan_file:
             scan_file.write(scan_json)
-
-    def upload_directory(self, directory, file_sizes=False):
-        # type: (ScanResult, bool) -> None
-        """Upload directory structure (if it has changed)"""
-
-        if not file_sizes and self.previous_scan == directory:
-            log.debug("No changes to directory scan")
-            return
-
-        try:
-            with self.rpc.batch() as batch:
-                batch.call_with_id(
-                    "authenticate_result",
-                    "device.check_auth",
-                    device_class="tuxtunnel",
-                    serial=self.serial,
-                    auth_token=self.auth_token,
-                )
-                batch.call_with_id(
-                    "upload_result",
-                    "device.set_remote_directory",
-                    file_sizes=file_sizes,
-                    directory=directory,
-                )
-        except jsonrpc.JSONRPCError as error:
-            log.error(
-                'unable to upload directory ("%s"=%s, "%s")',
-                error.method,
-                error.code,
-                error.message,
-            )
-        except Exception as error:
-            log.error("upload directory failed; %s", error)
-            return None
-        else:
-            log.debug("Uploaded directory scan successfully")
-            if not file_sizes:
-                self.previous_scan = directory

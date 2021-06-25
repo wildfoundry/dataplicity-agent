@@ -6,11 +6,10 @@ import tempfile
 import typing
 
 if typing.TYPE_CHECKING:
-    from typing import Text
+    from typing import Callable, Text
 
 from . import disk_tools
 from .directory_scanner import DirectoryScanner
-from .scan_directory import scan_directory
 from .m2m.packets import PacketType
 from .m2m.wsclient import WSClient
 
@@ -68,10 +67,10 @@ class RemoteDirectory(object):
         # type: () -> Text
         return "RemoteDirectory(%r)" % self.path
 
-    def scan(self):
-        # type: () -> None
+    def scan(self, on_success=None):
+        # type: (Callable[[], None]) -> None
         """Scan remote directory."""
-        self.directory_scanner.perform_scan()
+        self.directory_scanner.perform_scan(on_success=on_success)
 
     def get_snapshot_path(self, upload_id):
         # type: (Text) -> Text

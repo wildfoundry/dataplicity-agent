@@ -81,13 +81,7 @@ class Client(object):
             log.info("serial=%s", self.serial)
             log.info("poll=%s", self.poll_rate_seconds)
 
-            self.directory_scanner = DirectoryScanner(
-                self.exit_event,
-                self.remote_directory_path,
-                self.remote,
-                self.serial,
-                self.auth_token,
-            )
+            self.directory_scanner = DirectoryScanner(self.remote_directory_path)
             self.remote_directory = RemoteDirectory(
                 self.remote_directory_path, self.directory_scanner
             )
@@ -104,7 +98,6 @@ class Client(object):
         """Run the client "forever"."""
         clock_check_thread = ClockCheckThread()
         clock_check_thread.start()
-        self.directory_scanner.start()
 
         try:
             self.poll()
