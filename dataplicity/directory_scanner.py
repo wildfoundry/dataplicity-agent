@@ -15,7 +15,7 @@ log = logging.getLogger("agent")
 
 
 class DirectoryScanner(object):
-    """Periodically scans and uploads directory information."""
+    """Scans and serializes directory information."""
 
     def __init__(self, root_path):
         # type: (str) -> None
