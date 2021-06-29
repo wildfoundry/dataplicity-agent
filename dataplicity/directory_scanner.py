@@ -4,11 +4,10 @@ import json
 import logging
 import os.path
 import tempfile
-from threading import RLock, Thread
+from threading import Lock, Thread
 from time import time
-from typing import Callable
+from typing import Callable, Optional
 
-from . import jsonrpc
 from .compat import text_type
 from .scan_directory import ScanDirectoryError, ScanResult, scan_directory
 
@@ -27,11 +26,14 @@ class DirectoryScanner(object):
         """
         self.root_path = root_path
 
-        self._lock = RLock()
+        self._lock = Lock()
 
     def perform_scan(self, file_sizes=True, on_success=None):
         # type: (bool, Callable[[], None]) -> None
         """Perform a scan in the background."""
+        if self._lock.locked():
+            # Scan is in progress, no point in doing another
+            return
         thread = Thread(
             target=self._perform_scan,
             kwargs={"file_sizes": file_sizes, "on_success": on_success},
@@ -39,7 +41,7 @@ class DirectoryScanner(object):
         thread.start()
 
     def _perform_scan(self, file_sizes=True, on_success=None):
-        # type: (bool, Callable[], None) -> None
+        # type: (bool, Optional[Callable]) -> None
         """Scan and upload directory structure."""
         with self._lock:
             try:
