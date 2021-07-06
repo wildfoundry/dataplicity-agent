@@ -340,12 +340,17 @@ class WSClient(threading.Thread):
     def on_packet(self, packet):
         """Called with a binary packet."""
         try:
-            packet_type = packets.PacketType(packet[0])
+            packet_type = packet[0]
             packet_body = packet[1:]
-        except:
+        except Exception:
             log.exception("packet is badly formatted")
         else:
-            self.dispatcher.dispatch(packet_type, packet_body)
+            try:
+                packet_type = packets.PacketType(packet_type)
+            except Exception:
+                log.debug("unknown packet; %r", packet_type)
+            else:
+                self.dispatcher.dispatch(packet_type, packet_body)
 
     def channel_write(self, channel, data):
         """Write data to a virtual channel."""
