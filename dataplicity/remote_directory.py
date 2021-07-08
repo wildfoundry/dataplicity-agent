@@ -6,7 +6,7 @@ import tempfile
 import typing
 
 if typing.TYPE_CHECKING:
-    from typing import Text
+    from typing import Callable, Text
 
 from . import disk_tools
 from .directory_scanner import DirectoryScanner
@@ -67,10 +67,10 @@ class RemoteDirectory(object):
         # type: () -> Text
         return "RemoteDirectory(%r)" % self.path
 
-    def scan(self):
-        # type: () -> None
+    def scan(self, on_success=None):
+        # type: (Callable[[], None]) -> None
         """Scan remote directory."""
-        self.directory_scanner.perform_scan()
+        self.directory_scanner.perform_scan(on_success=on_success)
 
     def get_snapshot_path(self, upload_id):
         # type: (Text) -> Text
@@ -109,14 +109,25 @@ class RemoteDirectory(object):
         Returns:
             int: The size of the snapshot file (in bytes)
         """
-        file_path = os.path.join(self.path, path.lstrip("/"))
 
-        if not validate_path(file_path) or not file_path.startswith(self.path):
-            raise IllegalPath("Path %s is illegal" % file_path)
+        if path.startswith("\0"):
+            if path == "\0scan.json":
+                # Special file served from temp
+                file_path = os.path.join(
+                    tempfile.gettempdir(), "__dataplicity_remote_directory_scan___.json"
+                )
+            else:
+                raise IllegalPath("Unknown special path; %r" % path)
+        else:
+            # Regular file in remote directory
+            file_path = os.path.join(self.path, path.lstrip("/"))
+
+            if not validate_path(file_path) or not file_path.startswith(self.path):
+                raise IllegalPath("Path %s is illegal" % file_path)
 
         try:
             disk_usage = disk_tools.disk_usage(self.temp_path)
-            file_size = snapshot_size = os.path.getsize(file_path)
+            file_size = os.path.getsize(file_path)
         except Exception as error:
             # Don't want to fail here, probably worth honoring the request
             log.warning("failed to get disk usage information; %s", error)
@@ -252,4 +263,3 @@ class RemoteDirectory(object):
                 fail=0,
                 fail_reason="",
             )
-

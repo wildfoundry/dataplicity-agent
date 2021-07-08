@@ -5,7 +5,7 @@ import os
 import sys
 
 
-sdiskusage = namedtuple('sdiskusage', ['total', 'used', 'free', 'percent'])
+sdiskusage = namedtuple("sdiskusage", ["total", "used", "free", "percent"])
 
 
 def usage_percent(used, total, _round=None):
@@ -46,13 +46,13 @@ def disk_usage(path):
 
     # Total space which is only available to root (unless changed
     # at system level).
-    total = (st.f_blocks * st.f_frsize)
+    total = st.f_blocks * st.f_frsize
     # Remaining free space usable by root.
-    avail_to_root = (st.f_bfree * st.f_frsize)
+    avail_to_root = st.f_bfree * st.f_frsize
     # Remaining free space usable by user.
-    avail_to_user = (st.f_bavail * st.f_frsize)
+    avail_to_user = st.f_bavail * st.f_frsize
     # Total space being used in general.
-    used = (total - avail_to_root)
+    used = total - avail_to_root
     # Total space which is available to user (same as 'total' but
     # for the user).
     total_user = used + avail_to_user
@@ -65,4 +65,5 @@ def disk_usage(path):
     # reserved blocks that we are currently not considering:
     # https://github.com/giampaolo/psutil/issues/829#issuecomment-223750462
     return sdiskusage(
-        total=total, used=used, free=avail_to_user, percent=usage_percent_user)
+        total=total, used=used, free=avail_to_user, percent=usage_percent_user
+    )

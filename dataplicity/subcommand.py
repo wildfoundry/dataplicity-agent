@@ -19,6 +19,7 @@ class SubCommandMeta(type):
 
 class SubCommandType(object):
     """Base class for sub-commands"""
+
     __metaclass__ = SubCommandMeta
 
     def __init__(self, app):

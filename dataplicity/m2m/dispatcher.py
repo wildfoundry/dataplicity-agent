@@ -26,6 +26,7 @@ def expose(packet_type):
         f._dispatcher_exposed = True
         f._dispatcher_packet_type = packet_type
         return f
+
     return deco
 
 
@@ -42,7 +43,7 @@ class Dispatcher(object):
         self._handler_instance = handler_instance or self
 
         if log is None:
-            self.log = logging.getLogger('dispatcher')
+            self.log = logging.getLogger("dispatcher")
         else:
             self.log = log
 
@@ -61,10 +62,10 @@ class Dispatcher(object):
 
     def _init_dispatcher(self):
         for method_name in dir(self._handler_instance):
-            if method_name.startswith('_'):
+            if method_name.startswith("_"):
                 continue
             method = getattr(self._handler_instance, method_name)
-            if getattr(method, '_dispatcher_exposed', False):
+            if getattr(method, "_dispatcher_exposed", False):
                 packet_type = method._dispatcher_packet_type
                 self._packet_handlers[packet_type] = method
 
@@ -73,15 +74,17 @@ class Dispatcher(object):
         if not self._dispatch_enabled:
             return
         if not isinstance(packet_type, int):
-            raise PacketFormatError('packet type should be an int')
-        assert self._packet_cls is not None, "packet class must be set with set_packet_class"
+            raise PacketFormatError("packet type should be an int")
+        assert (
+            self._packet_cls is not None
+        ), "packet class must be set with set_packet_class"
 
         packet = self._packet_cls.create(packet_type, *packet_body)
         return self.dispatch_packet(packet)
 
     def dispatch_packet(self, packet):
-        if not getattr(packet, 'no_log', False):
-            self.log.debug('received %r', packet)
+        if not getattr(packet, "no_log", False):
+            self.log.debug("received %r", packet)
         packet_type = packet.type
         method = self._packet_handlers.get(packet_type, None)
 
@@ -106,4 +109,4 @@ class Dispatcher(object):
 
     def on_missing_handler(self, packet):
         """Called when no handler is available to handle `packet`"""
-        self.log.debug('missing handler for %r', packet)
+        self.log.debug("missing handler for %r", packet)

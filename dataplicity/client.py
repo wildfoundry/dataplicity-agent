@@ -39,6 +39,10 @@ class Client(object):
         # type: (...) -> None
         self.rpc_url = rpc_url or constants.SERVER_URL
         self.m2m_url = m2m_url or constants.M2M_URL
+
+        if "?" not in self.m2m_url:
+            self.m2m_url += "?features=" + ",".join(constants.M2M_FEATURES)
+
         self.auth_token = auth_token
         self.serial = serial
         self.remote_directory_path = remote_directory_path
@@ -81,13 +85,7 @@ class Client(object):
             log.info("serial=%s", self.serial)
             log.info("poll=%s", self.poll_rate_seconds)
 
-            self.directory_scanner = DirectoryScanner(
-                self.exit_event,
-                self.remote_directory_path,
-                self.remote,
-                self.serial,
-                self.auth_token,
-            )
+            self.directory_scanner = DirectoryScanner(self.remote_directory_path)
             self.remote_directory = RemoteDirectory(
                 self.remote_directory_path, self.directory_scanner
             )
@@ -104,7 +102,6 @@ class Client(object):
         """Run the client "forever"."""
         clock_check_thread = ClockCheckThread()
         clock_check_thread.start()
-        self.directory_scanner.start()
 
         try:
             self.poll()

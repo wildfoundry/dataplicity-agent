@@ -56,12 +56,14 @@ if PY2:
     from itertools import izip_longest as zip_longest
     from urllib2 import urlopen, HTTPError
     import Queue as queue
+    from urllib2 import Request
 else:
     from urllib.parse import urlparse, parse_qs, urlunparse
     from urllib.parse import urlencode, quote
     from itertools import zip_longest
     from urllib.request import urlopen, HTTPError
     import queue
+    from urllib.request import Request
 
 
 # pickle is the C version on PY3
@@ -121,5 +123,5 @@ def with_metaclass(meta, *bases):
             if this_bases is None:
                 return type.__new__(cls, name, (), d)
             return meta(name, bases, d)
-    return metaclass("temporary_class", None, {})
 
+    return metaclass("temporary_class", None, {})

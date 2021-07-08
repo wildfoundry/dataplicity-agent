@@ -192,7 +192,7 @@ class M2MManager(object):
         elif action == "run-command":
             self.open_command_service(data["port"], data["command"])
         elif action == "scan-directory":
-            self.client.directory_scanner.schedule_scan()
+            self.client.directory_scanner.perform_scan()
         # Unrecognized instructions are ignored
 
     def open_terminal(self, name, port, size=None):

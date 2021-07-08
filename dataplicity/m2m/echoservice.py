@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 import logging
 import weakref
 
-log = logging.getLogger('m2m')
+log = logging.getLogger("m2m")
 
 
 class EchoService(object):
