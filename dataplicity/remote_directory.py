@@ -148,9 +148,11 @@ class RemoteDirectory(object):
             snapshot_size = os.path.getsize(snapshot_path)
             log.debug("created snapshot for %s; %s", file_path, snapshot_path)
             return snapshot_size
+        except (IOError, OSError) as error:
+            raise AddFail("Unable to open (%s)" % error.strerror)
         except Exception as error:
             log.error("failed to add_upload; %r", error)
-            raise AddFail("Unable to add upload; %s" % error)
+            raise AddFail("Unable to open; %s" % error)
 
     def read_upload(self, upload_id, offset, size):
         # type: (Text, int, int) -> bytes
