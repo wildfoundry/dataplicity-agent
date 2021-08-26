@@ -91,6 +91,10 @@ class PacketType(IntEnum):
     scan_remote_directory = 29
     scan_remote_directory_result = 30
 
+    # Remote write files ADDED 18/8/21
+    write_remote_file = 31
+    write_remote_file_result = 32
+
     response = 100
 
     command_add_route = 101
