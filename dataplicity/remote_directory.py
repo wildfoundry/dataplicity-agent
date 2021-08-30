@@ -334,6 +334,7 @@ class RemoteDirectory(object):
             client.send(
                 PacketType.write_remote_file_result,
                 id,
+                offset,
                 device_path,
                 2,
                 str(error).encode("utf-8", "replace"),
@@ -352,6 +353,7 @@ class RemoteDirectory(object):
                 client.send(
                     PacketType.write_remote_file_result,
                     id,
+                    offset,
                     device_path,
                     3,
                     str(error).encode("utf-8", "replace"),
@@ -359,7 +361,14 @@ class RemoteDirectory(object):
                 return
 
         # Return a success response
-        client.send(PacketType.write_remote_file_result, id, device_path, 0, b"")
+        client.send(
+            PacketType.write_remote_file_result,
+            id,
+            offset + len(data),
+            device_path,
+            0,
+            b"",
+        )
 
     def copy_download(self, device_path, path):
         # type (Text, Text) -> None
