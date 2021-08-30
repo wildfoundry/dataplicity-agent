@@ -301,12 +301,6 @@ class RemoteDirectory(object):
                 fail_reason="",
             )
 
-    id: bytes
-    position: int
-    device_path: bytes
-    fail: int
-    fail_reason: bytes
-
     def on_write_remote_file(self, client, id, path, device_path, offset, data, final):
         # type: (WSClient, bytes, bytes, bytes, int, bytes, int) -> None
         """Write data from server to temporary file."""
