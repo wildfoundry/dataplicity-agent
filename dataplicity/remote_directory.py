@@ -325,7 +325,8 @@ class RemoteDirectory(object):
 
         try:
             # Write the data at the given offset
-            with open(write_device_path, "ab") as download_file:
+            log.debug("writing %i bytes to %s", len(data), write_device_path)
+            with open(write_device_path, "r+b") as download_file:
                 download_file.seek(offset)
                 download_file.write(data)
         except Exception as error:
@@ -340,16 +341,17 @@ class RemoteDirectory(object):
                 str(error).encode("utf-8", "replace"),
             )
             try:
-                os.remove(device_path)
+                log.debug("removing %s", write_device_path)
+                os.remove(write_device_path)
             except:
-                log.exception("failed to remove %r", device_path)
+                log.exception("failed to remove %r", write_device_path)
             return
 
         if final:
             try:
-                client.remote_directory.copy_download(device_path, path)
+                client.remote_directory.copy_download(write_device_path, path)
             except Exception as error:
-                log.exception("failed to copy download")
+                log.exception("failed to copy download %s %s", write_device_path, path)
                 client.send(
                     PacketType.write_remote_file_result,
                     id,
@@ -393,6 +395,7 @@ class RemoteDirectory(object):
                 )
             destination_path = "%s%s.copy%s.%s" % (dirname, basename, tries, ext)
 
+        log.debug("copying %s to %s", device_path, destination_path)
         try:
             os.rename(device_path, destination_path)
         except Exception:
@@ -402,5 +405,3 @@ class RemoteDirectory(object):
             except Exception:
                 log.exception("unable to store download")
                 raise
-        # The download has been copied to the file system, so we may delete the temp file
-        os.remove(device_path)
