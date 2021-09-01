@@ -393,7 +393,7 @@ class RemoteDirectory(object):
                 raise TooManyCopies(
                     "Can't find unique filename for %s" % destination_path
                 )
-            destination_path = "%s%s.copy%s.%s" % (dirname, basename, tries, ext)
+            destination_path = "%s/%s (%s)%s" % (dirname, basename, tries, ext)
 
         log.debug("copying %s to %s", device_path, destination_path)
         try:
