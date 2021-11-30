@@ -4,3 +4,4 @@ lomond==0.3.3
 six==1.10.0
 typing==3.7.4.3
 typing_extensions<4.0.0
+distro==1.6.0
