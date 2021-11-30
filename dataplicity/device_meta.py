@@ -41,7 +41,9 @@ def get_uname():
 def get_os_version():
     """Get the OS version."""
     # Linux is a fair assumption for now
-    return f"{distro.name()} {distro.version()} {distro.codename()}"
+    return " ".join(
+        (distro.name(), distro.version(), distro.codename())
+    ).strip()
 
 
 def get_ip_address_list():
