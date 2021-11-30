@@ -1,6 +1,7 @@
 # -*- coding: utf-8
 from dataplicity.m2m.bencode import encode, decode, EncodingError, DecodeError
 import pytest
+from six import binary_type
 
 
 def test_bencode_encoder():

@@ -5,9 +5,14 @@ import logging
 import os
 import os.path
 import time
+import sys
 
-from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple, TypedDict
+from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple
 
+if sys.version_info >= (3, 8):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 try:
     # Scandir from stdlib in Python3

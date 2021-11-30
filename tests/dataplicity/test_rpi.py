@@ -3,7 +3,7 @@ from mock import patch
 import six
 
 
-REVISION_TEMPLATE = '\nRevision: %s'
+REVISION_TEMPLATE = b'\nRevision: %s'
 
 
 """ Unfortunetely, we can't use mock_open from mock library, because
@@ -18,7 +18,7 @@ class FileContentIterator(six.Iterator):
     """ this is a replacement for mock_open which supports iterations.
     """
     def __init__(self, file_contents):
-        self.file_contents = file_contents.split('\n')
+        self.file_contents = file_contents.split(b'\n')
         self.index = 0
 
     def __iter__(self):
@@ -65,13 +65,13 @@ def test_get_machine_revision():
     def builtin_open_name():
         return '{}.open'.format(six.moves.builtins.__name__)
 
-    REVISION = 'abc123'
+    REVISION = b'abc123'
     with patch(
         builtin_open_name(),
         mock_open(REVISION_TEMPLATE % REVISION),
         create=True
     ):
-        assert get_machine_revision() == REVISION
+        assert get_machine_revision() == REVISION.decode()
 
     # if the file doesn't exist, the version should be None
     with patch(
