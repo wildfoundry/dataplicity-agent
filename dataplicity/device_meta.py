@@ -1,12 +1,13 @@
 from __future__ import unicode_literals
 
 import logging
+
+import distro
 import platform
 
-from .iptool import get_all_interfaces
 from . import rpi
 from ._version import __version__
-
+from .iptool import get_all_interfaces
 
 log = logging.getLogger("agent")
 
@@ -40,8 +41,9 @@ def get_uname():
 def get_os_version():
     """Get the OS version."""
     # Linux is a fair assumption for now
-    distro = " ".join(platform.linux_distribution()).strip()
-    return distro
+    return " ".join(
+        (distro.name(), distro.version(), distro.codename())
+    ).strip()
 
 
 def get_ip_address_list():
