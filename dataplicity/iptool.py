@@ -4,11 +4,11 @@ IP related tools.
 
 """
 
-import sys
-import socket
-import fcntl
-import struct
 import array
+import fcntl
+import socket
+import struct
+import sys
 
 from .compat import PY3
 
@@ -25,7 +25,7 @@ def get_all_interfaces():
 
     May raise an IOError if platform is unsupported
     """
-    _is_64bits = sys.maxsize > 2 ** 32
+    _is_64bits = sys.maxsize > 2**32
     struct_size = 40 if _is_64bits else 32
 
     if_buffer = array.array("B", b"\0" * MAX_INTERFACES * struct_size)
@@ -42,7 +42,12 @@ def get_all_interfaces():
     finally:
         _socket.close()
 
-    ifaces = if_buffer.tostring()
+    try:
+        # tostring() was renamed to tobytes() in Python3.2
+        ifaces = if_buffer.tobytes()
+    except AttributeError:
+        ifaces = if_buffer.tostring()
+
     interfaces = []
     for offset in range(0, if_buffer_size, struct_size):
         _iface = ifaces[offset : offset + struct_size]
