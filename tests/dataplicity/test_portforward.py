@@ -65,7 +65,7 @@ def test_calling_redirect_service_from_m2mmanager_works():
                 b'm2m_port': 1234
             }
         )
-        assert redirect_port.call_args == call(1234, 22)
+        assert redirect_port.call_args == call(m2m_manager.services_limiter, 1234, 22)
 
 
 def test_can_open_service_by_name(manager, limiter):
