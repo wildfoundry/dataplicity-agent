@@ -4,10 +4,11 @@ from mock import patch
 
 def test_get_os_version():
     with patch(
-        'platform.linux_distribution',
-        lambda: ('test-distro', '1.0.0', ''),
+        'distro.name', lambda: "test-distro"
     ):
-        assert 'test-distro 1.0.0' == device_meta.get_os_version()
+        with patch("distro.version", lambda: "1.0.0"):
+            with patch("distro.codename", lambda: ""):
+                assert 'test-distro 1.0.0' == device_meta.get_os_version()
 
 
 def test_get_uname():

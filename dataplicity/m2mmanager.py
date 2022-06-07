@@ -1,7 +1,6 @@
 """Manages M2M connections."""
 
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import print_function, unicode_literals
 
 import logging
 import subprocess
@@ -10,11 +9,10 @@ import threading
 from . import constants
 from .compat import PY3
 from .limiter import Limiter
-from .m2m import WSClient, EchoService
-from .m2m.fileservice import FileService
+from .m2m import EchoService, WSClient
 from .m2m.commandservice import CommandService
+from .m2m.fileservice import FileService
 from .m2m.remoteprocess import RemoteProcess
-
 
 log = logging.getLogger("m2m")
 
@@ -184,7 +182,7 @@ class M2MManager(object):
         elif action == "open-portredirect":
             device_port = data["device_port"]
             m2m_port = data["m2m_port"]
-            self.client.port_forward.redirect_port(m2m_port, device_port)
+            self.client.port_forward.redirect_port(self.services_limiter, m2m_port, device_port)
         elif action == "reboot-device":
             self.reboot()
         elif action == "read-file":

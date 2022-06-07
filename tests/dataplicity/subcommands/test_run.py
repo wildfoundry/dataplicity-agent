@@ -25,6 +25,7 @@ def test_run_command(run_forever, serial_file, auth_file):
         m2m_url = 'ws://example.com'
         serial = None
         auth_token = None
+        remote_directory = None
 
     app = App()
     # set fake command-line args

@@ -91,7 +91,8 @@ def encode(obj):
 
     add_encode(obj)
     bencode_data = b"".join(binary)
-    assert decode(bencode_data)
+
+    assert decode(bencode_data) is not None
     return bencode_data
 
 
