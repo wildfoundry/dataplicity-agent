@@ -485,3 +485,14 @@ class WSClient(threading.Thread):
         except Exception as error:
             self.send("scan_remote_directory_result", str(error))
 
+    @expose(PacketType.write_remote_file)
+    def on_write_remote_file(
+        self, packet_type, id, path, device_path, offset, data, final
+    ):
+        # type: (PacketType, bytes, bytes, bytes, int, bytes, int) -> None
+        """Server wants us to write to the filesystem."""
+
+        self.remote_directory.on_write_remote_file(
+            self, id, path, device_path, offset, data, final
+        )
+

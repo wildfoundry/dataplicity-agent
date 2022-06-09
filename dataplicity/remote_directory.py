@@ -2,6 +2,7 @@ import logging
 import shutil
 import os
 import os.path
+import shutil
 import tempfile
 import typing
 
@@ -40,6 +41,10 @@ class IllegalPath(RemoteDirectoryError):
     """The upload path is invalid."""
 
 
+class TooManyCopies(RemoteDirectoryError):
+    """Too many duplicate path"""
+
+
 def validate_path(path):
     # type: (Text) -> bool
     """Check a path has no backrefs that may end up serving outside the remote directory root.
@@ -61,7 +66,10 @@ class RemoteDirectory(object):
         path = os.path.expanduser(path)
         self.path = os.path.abspath(path)
         self.directory_scanner = directory_scanner
-        self.temp_path = tempfile.gettempdir()
+        # Use /var/tmp if it exists as it is persistent
+        self.temp_path = (
+            "/var/tmp" if os.path.exists("/var/tmp") else tempfile.gettempdir()
+        )
 
     def __repr__(self):
         # type: () -> Text
@@ -83,7 +91,7 @@ class RemoteDirectory(object):
             str: A path to the snapshot file.
         """
         try:
-            temp_path = tempfile.gettempdir()
+            temp_path = self.temp_path
             dir_path = os.path.join(temp_path, "dataplicity_remote")
             if not os.path.isdir(dir_path):
                 os.mkdir(dir_path)
@@ -93,6 +101,33 @@ class RemoteDirectory(object):
         except Exception as error:
             log.warning("unable to get snapshot path; %r", error)
             raise RemoteDirectoryError("Failed to get snapshot path")
+
+    def add_download(self, id):
+        # type: (Text) -> Text
+        """Add an upload.
+
+        Args:
+            id (str): The download ID
+
+        Returns:
+            [type]: [description]
+        """
+
+        temp_path = self.temp_path
+        dir_path = os.path.join(temp_path, "dataplicity_remote_downloads")
+        if not os.path.isdir(dir_path):
+            os.mkdir(dir_path)
+            log.debug("%r created %s", self, dir_path)
+
+        device_path = os.path.join(dir_path, id)
+
+        # Create the file
+        # This could fail for a variety of reasons
+        # Exceptions must be caught by the caller
+        with open(device_path, "wb"):
+            pass
+
+        return device_path
 
     def add_upload(self, path, upload_id):
         # type: (Text, Text) -> int
@@ -265,3 +300,109 @@ class RemoteDirectory(object):
                 fail=0,
                 fail_reason="",
             )
+
+    def on_write_remote_file(self, client, id, path, device_path, offset, data, final):
+        # type: (WSClient, bytes, bytes, bytes, int, bytes, int) -> None
+        """Write data from server to temporary file."""
+        write_device_path = device_path.decode("utf-8")
+        try:
+            # If we haven't set a device_path allocate a temp location
+            if not write_device_path:
+                write_device_path = self.add_download(id.decode("utf-8"))
+        except Exception as error:
+            log.exception("error adding download")
+            # Couldn't create temporary location, tell server
+            client.send(
+                PacketType.write_remote_file_result,
+                id,
+                device_path,
+                1,
+                str(error).encode("utf-8", "replace"),
+            )
+            return
+
+        device_path = write_device_path.encode("utf-8")
+
+        if data:
+            try:
+                # Write the data at the given offset
+                log.debug("writing %i bytes to %s offset=%i", len(data), write_device_path, offset)
+                with open(write_device_path, "r+b") as download_file:
+                    download_file.seek(offset)
+                    download_file.write(data)
+            except Exception as error:
+                # Error writing chunk, tell server
+                log.exception("error writing download")
+                client.send(
+                    PacketType.write_remote_file_result,
+                    id,
+                    offset,
+                    device_path,
+                    2,
+                    str(error).encode("utf-8", "replace"),
+                )
+                try:
+                    log.debug("removing %s", write_device_path)
+                    os.remove(write_device_path)
+                except:
+                    log.exception("failed to remove %r", write_device_path)
+                return
+
+        if final:
+            try:
+                client.remote_directory.copy_download(write_device_path, path)
+            except Exception as error:
+                log.exception("failed to copy download %s %s", write_device_path, path)
+                client.send(
+                    PacketType.write_remote_file_result,
+                    id,
+                    offset,
+                    device_path,
+                    3,
+                    str(error).encode("utf-8", "replace"),
+                )
+                return
+
+        # Return a success response
+        client.send(
+            PacketType.write_remote_file_result,
+            id,
+            offset + len(data),
+            device_path,
+            0,
+            b"",
+        )
+
+    def copy_download(self, device_path, path):
+        # type (Text, Text) -> None
+        """Copy a download in to the remote directory"""
+
+        destination_path = os.path.join(self.path, path.lstrip("/"))
+        dirname, filename = os.path.split(destination_path)
+        if not os.path.isdir(dirname):
+            dirname = self.path
+
+        basename, ext = os.path.splitext(filename)
+
+        # If the foo.bar exists, try foo.copyN.bar, where N is an integer
+        # N starts at 1 and will increase until it finds a free filename
+
+        tries = 0
+        while os.path.exists(destination_path):
+            tries += 1
+            if tries > 100:
+                raise TooManyCopies(
+                    "Can't find unique filename for %s" % destination_path
+                )
+            destination_path = "%s/%s(%s)%s" % (dirname, basename, tries, ext)
+
+        log.debug("copying %s to %s", device_path, destination_path)
+        try:
+            os.rename(device_path, destination_path)
+        except Exception:
+            # Atomic rename didn't work, we will need to copy the data
+            try:
+                shutil.move(device_path, destination_path)
+            except Exception:
+                log.exception("unable to store download")
+                raise

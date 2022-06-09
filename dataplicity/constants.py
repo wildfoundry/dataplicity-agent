@@ -24,7 +24,7 @@ def get_environ_int(name, default):
 CONF_PATH = "/etc/dataplicity/dataplicity.conf"
 SERVER_URL = environ.get("DATAPLICITY_API_URL", "https://api.dataplicity.com")
 M2M_URL = environ.get("DATAPLICITY_M2M_URL", "wss://m2m.dataplicity.com/m2m/")
-M2M_FEATURES = {"scan"}
+M2M_FEATURES = {"scan", "downloads"}
 SERIAL_LOCATION = "/opt/dataplicity/tuxtunnel/serial"
 AUTH_LOCATION = "/opt/dataplicity/tuxtunnel/auth"
 REMOTE_DIRECTORY_LOCATION = "/home/dataplicity/remote"

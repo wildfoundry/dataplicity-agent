@@ -91,6 +91,10 @@ class PacketType(IntEnum):
     scan_remote_directory = 29
     scan_remote_directory_result = 30
 
+    # Remote write files ADDED 18/8/21
+    write_remote_file = 31
+    write_remote_file_result = 32
+
     response = 100
 
     command_add_route = 101
@@ -489,3 +493,27 @@ class ScanRemoteDirectoryResult(M2MPacket):
 
     type = PacketType.scan_remote_directory_result
     attributes = [("error", bytes)]
+
+
+class WriteRemoteFile(M2MPacket):
+    type = PacketType.write_remote_file
+    attributes = [
+        ("id", bytes),
+        ("path", bytes),
+        ("device_path", bytes),
+        ("offset", int),
+        ("data", bytes),
+        ("final", int),
+    ]
+
+
+class WriteRemoteFileResult(M2MPacket):
+    type = PacketType.write_remote_file_result
+    attributes = [
+        ("id", bytes),
+        ("position", int),
+        ("device_path", bytes),
+        ("fail", int),
+        ("fail_reason", bytes),
+    ]
+
