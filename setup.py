@@ -27,6 +27,6 @@ setup(
     packages=find_packages(),
     classifiers=classifiers,
     entry_points={"console_scripts": ["dataplicity = dataplicity.app:main"]},
-    install_requires=["enum34==1.1.6", "six==1.10.0", "lomond==0.3.3"],
+    install_requires=["enum34==1.1.6", "six==1.10.0", "lomond==0.3.3", "distro==1.6.0"],
     zip_safe=True,
 )
