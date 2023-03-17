@@ -57,6 +57,7 @@ if PY2:
     from urllib2 import urlopen, HTTPError
     import Queue as queue
     from urllib2 import Request
+    from inspect import getargspec as getfullargspec
 else:
     from urllib.parse import urlparse, parse_qs, urlunparse
     from urllib.parse import urlencode, quote
@@ -64,6 +65,7 @@ else:
     from urllib.request import urlopen, HTTPError
     import queue
     from urllib.request import Request
+    from inspect import getfullargspec
 
 
 # pickle is the C version on PY3

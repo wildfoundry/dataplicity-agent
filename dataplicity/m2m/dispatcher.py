@@ -7,7 +7,7 @@ Dispatches incoming packets
 """
 
 
-from ..compat import text_type
+from ..compat import text_type, getfullargspec
 
 import logging
 import inspect
@@ -92,7 +92,8 @@ class Dispatcher(object):
             self.on_missing_handler(packet)
             return None
 
-        arg_spec = inspect.getargspec(method)
+        arg_spec = getfullargspec(method)
+
         args, kwargs = packet.get_method_args(len(arg_spec[0]))
 
         try:
