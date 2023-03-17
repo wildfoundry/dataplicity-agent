@@ -16,7 +16,7 @@ from threading import Thread
 
 
 CHECK_PERIOD = 1.0
-MAX_CLOCK_DISCREPENCY = 10.0
+MAX_CLOCK_DISCREPENCY = 180.0
 
 
 class ClockCheckThread(Thread):
