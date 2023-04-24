@@ -5,7 +5,8 @@ from setuptools import setup, find_packages
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "Programming Language :: Python",
+    "Programming Language :: Python :: 2",
+    "Programming Language :: Python :: 3",
 ]
 
 # http://bit.ly/2alyerp
@@ -25,8 +26,9 @@ setup(
     url="https://www.dataplicity.com",
     platforms=["any"],
     packages=find_packages(),
+    python_requires='>=2.7',
     classifiers=classifiers,
     entry_points={"console_scripts": ["dataplicity = dataplicity.app:main"]},
-    install_requires=["enum34==1.1.6", "six==1.10.0", "lomond==0.3.3"],
+    install_requires=["enum34==1.1.6", "six==1.10.0", "lomond==0.3.3", "distro==1.6.0"],
     zip_safe=True,
 )
