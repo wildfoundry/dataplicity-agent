@@ -512,6 +512,7 @@ class WriteRemoteFileResult(M2MPacket):
     attributes = [
         ("id", bytes),
         ("position", int),
+        ("chunk_size", int),
         ("device_path", bytes),
         ("fail", int),
         ("fail_reason", bytes),

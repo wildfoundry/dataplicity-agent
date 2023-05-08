@@ -16,7 +16,7 @@ from threading import Thread
 
 
 CHECK_PERIOD = 1.0
-MAX_CLOCK_DISCREPENCY = 10.0
+MAX_CLOCK_DISCREPANCY = 180.0
 
 
 class ClockCheckThread(Thread):
@@ -34,7 +34,7 @@ class ClockCheckThread(Thread):
             sleep(CHECK_PERIOD)
             elapsed = time() - start
 
-            if elapsed > MAX_CLOCK_DISCREPENCY:
+            if elapsed > MAX_CLOCK_DISCREPANCY:
                 self.on_fail()
 
     def on_fail(self):
