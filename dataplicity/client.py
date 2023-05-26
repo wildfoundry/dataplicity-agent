@@ -268,6 +268,11 @@ class Client(object):
                 revision_code=meta["machine_revision"],
             )
             batch.call_with_id(
+                "set_model_name_result",
+                "device.set_model_name",
+                model_name=meta["model_name"],
+            )
+            batch.call_with_id(
                 "set_os_version_result",
                 "device.set_os_version",
                 os_version=meta["os_version"],
@@ -291,6 +296,7 @@ class Client(object):
             batch.check(
                 "set_agent_version_result",
                 "set_machine_revision_result",
+                "set_model_name_result",
                 "set_os_version_result",
                 "set_uname_result",
                 "set_ip_addresses_result",
