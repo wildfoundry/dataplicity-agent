@@ -33,3 +33,15 @@ def get_machine_revision():
         if isinstance(revision_code, bytes):
             return revision_code.decode("utf-8")
         return revision_code
+
+
+def get_model_name():
+    """
+    /proc/device-tree itself is a symlink to /sys/firmware/devicetree/base
+    :return:
+    """
+    try:
+        with open("/proc/device-tree/model", "rb") as fp:
+            return fp.read().decode("utf-8")
+    except IOError:
+        return ""

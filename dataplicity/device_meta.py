@@ -24,6 +24,7 @@ def get_meta():
     meta = {}
     meta["agent_version"] = __version__
     meta["machine_revision"] = rpi.get_machine_revision()
+    meta["model_name"] = rpi.get_model_name()
     meta["os_version"] = get_os_version()
     meta["uname"] = get_uname()
     meta["ip_list"] = get_ip_address_list()
