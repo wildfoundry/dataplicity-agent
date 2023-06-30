@@ -282,6 +282,8 @@ class WSClient(threading.Thread):
             self.on_binary(event.data)
         elif event.name == "poll":
             self.sync_identity()
+        elif event.name == "connect_fail":
+            self.on_connect_fail(event)
 
     def close(self, timeout=5):
         self.websocket.close()
@@ -331,6 +333,9 @@ class WSClient(threading.Thread):
         """Ask manager to set the m2m identity."""
         self.manager.set_identity(self.identity)
 
+    def on_connect_fail(self, event):
+        log.warning("Connection failure: %s", event)
+
     def on_disconnected(self):
         """Called when ws socket closes."""
         self.identity = None
@@ -365,6 +370,7 @@ class WSClient(threading.Thread):
         """Send a channel control packet."""
         control_json = json.dumps(control_dict)
         self.send(PacketType.request_send_control, channel=channel, data=control_json)
+
 
     # --------------------------------------------------------
     # Packet handlers

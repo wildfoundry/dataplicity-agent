@@ -1,13 +1,17 @@
 from __future__ import unicode_literals
 from __future__ import print_function
 
+import json
 import logging
 import platform
-from threading import Event, Lock
 import os
 import random
 import sys
+import requests
 import time
+
+from collections import defaultdict
+from threading import Event, Lock
 
 from ._version import __version__
 from . import constants
@@ -20,6 +24,7 @@ from .m2mmanager import M2MManager
 from .portforward import PortForwardManager
 from .remote_directory import RemoteDirectory
 from .tags import get_tag_list, TagError
+from .security_extensions.base import SecurityExtensions
 import six
 
 log = logging.getLogger("agent")
@@ -34,6 +39,7 @@ class Client(object):
         m2m_url=None,  # type: str
         serial=None,  # type: str
         auth_token=None,  # type: str
+        device_token=None,  # type: str
         remote_directory_path=None,  # type: str
     ):
         # type: (...) -> None
@@ -44,8 +50,11 @@ class Client(object):
             self.m2m_url += "?features=" + ",".join(constants.M2M_FEATURES)
 
         self.auth_token = auth_token
+        self.device_token = device_token
         self.serial = serial
         self.remote_directory_path = remote_directory_path
+
+        self.features_enabled = defaultdict(bool)
 
         self._sync_lock = Lock()
         self._sent_meta = False
@@ -54,11 +63,24 @@ class Client(object):
         self._tag_list = None
 
     @classmethod
-    def _read(cls, path):
+    def _read(cls, path, raise_on_error=False):
         """Read contents of a file, strip whitespace."""
+        data = None
         path = os.path.expanduser(path)
-        with open(path, "rt") as fh:
-            data = fh.read().strip()
+        try:
+            with open(path, "rt") as fh:
+                data = fh.read().strip()
+        except FileNotFoundError:
+            if raise_on_error:
+                raise
+        return data
+
+    @classmethod
+    def _write(cls, path, data):
+        """Writes contents of a file, strip whitespace."""
+        path = os.path.expanduser(path)
+        with open(path, "w") as fh:
+            data = fh.write(data.strip())
         return data
 
     def _init(self):
@@ -69,14 +91,33 @@ class Client(object):
             log.info("uname=%s", " ".join(platform.uname()))
 
             self.remote = jsonrpc.JSONRPC(self.rpc_url)
+
             self.serial = self.serial or self._read(constants.SERIAL_LOCATION)
             self.auth_token = self.auth_token or self._read(constants.AUTH_LOCATION)
+            self.device_token = self.device_token or self._read(constants.DEVICE_TOKEN_LOCATION)
+
+            self.load_features()
+
+            # TODO: do this from a flag...
+            self.features_enabled["ids_enabled"] = True
+
+            if self.features_enabled["device_class_undefined"]:
+                 self.assign_device_class_from_file()
+
+            if not self.device_token:
+                log.info("Device token not found.")
+                log.info("Migrating to device token: %s", self.serial)
+                self.migrate_to_device_token(self.serial, self.auth_token)
+
             self.remote_directory_path = (
                 self.remote_directory_path or constants.REMOTE_DIRECTORY_LOCATION
             )
             log.info("remote_directory=%s", self.remote_directory_path)
 
-            self.poll_rate_seconds = 60
+            self.security_extensions = SecurityExtensions.init(self)
+            # TODO: Very exagerated, but i want to make as many requests as possible.
+            self.poll_rate_seconds = 5
+
             self.disk_poll_rate_seconds = 60 * 60
             self.next_disk_poll_time = time.time()
 
@@ -97,6 +138,65 @@ class Client(object):
         except Exception:
             log.exception("failed to initialize client")
             raise
+
+    def assign_device_class_from_file(self):
+        data = self._read(constants.DEVICE_CLASS_LOCATION)
+        if not data:
+            return
+        device_class_data = json.loads(data)
+        headers = {"DA_TOKEN": f"{self.device_token}"}
+        response = requests.post(
+            "%s/deviceclass/" % self.rpc_url,
+            json=device_class_data,
+            headers=headers
+        )
+
+        if response.ok:
+            log.info("Assigned device class: %s", device_class_data)
+        else:
+            log.info("Error assigning device class from file: [%s] %s", response.status_code, response.text)
+            log.info(
+                'File format should be a json: '
+                '{"name": "device class name", "description": "deviceclass description"}'
+            )
+
+    def load_features(self):
+        headers = {"DA_TOKEN": f"{self.device_token}"}
+        response = requests.get("%s/features/" % self.rpc_url, headers=headers)
+
+        if response.ok:
+            data = response.json()
+            for key, value in data.items():
+                self.features_enabled[key] = value
+            features_str = [
+                "%s=%s" % (feature, value)
+                for feature, value in self.features_enabled.items()
+            ]
+            log.info("Features: %s", features_str)
+        else:
+            log.info("Authentication error meanwhile loading features: [%s] %s", response.status_code, response.text)
+
+    def migrate_to_device_token(self, serial, auth_token):
+        """ Migrates authentication from serial/ auth tuple to
+        device token authentication.
+
+        Once the device token has been created for a device,
+        this would never work again.
+        """
+        log.info("Requesting device authentication token")
+        json_data = {
+            "serial": serial,
+            "auth_token": auth_token
+        }
+        response = requests.post(
+            "%s/auth/" % self.rpc_url,
+            json=json_data
+        )
+        if response.ok:
+            self._write(constants.DEVICE_TOKEN_LOCATION, response.json()["device_token"])
+            log.info("New device auth token created")
+        else:
+            log.info("Authentication error: [%s] %s", response.status_code, response.text)
 
     def run_forever(self):
         """Run the client "forever"."""
@@ -203,6 +303,13 @@ class Client(object):
             log.error("tag poll failed %s", error)
 
         self.sync()
+
+        if self.features_enabled["ids_capable"] \
+                and self.features_enabled["ids_enabled"]:
+            try:
+                self.security_extensions.poll()
+            except Exception as error:
+                log.exception("security extensions failed %s", error)
 
     def close(self):
         """Perform shutdown."""

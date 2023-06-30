@@ -27,7 +27,9 @@ M2M_URL = environ.get("DATAPLICITY_M2M_URL", "wss://m2m.dataplicity.com/m2m/")
 M2M_FEATURES = {"scan", "downloads"}
 SERIAL_LOCATION = "/opt/dataplicity/tuxtunnel/serial"
 AUTH_LOCATION = "/opt/dataplicity/tuxtunnel/auth"
+DEVICE_TOKEN_LOCATION = "/opt/dataplicity/tuxtunnel/device_token"
 REMOTE_DIRECTORY_LOCATION = "/home/dataplicity/remote"
+DEVICE_CLASS_LOCATION = "/opt/dataplicity/tuxtunnel/device_class"
 
 
 # Client will reconnect if the server hasn't responded in this time

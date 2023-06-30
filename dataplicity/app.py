@@ -203,3 +203,7 @@ def main():
     return_code = App().run() or 0
     log.debug("exit with code %s", return_code)
     sys.exit(return_code)
+
+
+if __name__ == '__main__':
+    main()

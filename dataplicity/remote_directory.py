@@ -376,7 +376,6 @@ class RemoteDirectory(object):
     def copy_download(self, device_path, path):
         # type (Text, Text) -> None
         """Copy a download in to the remote directory"""
-
         destination_path = os.path.join(self.path, path.decode("utf-8").lstrip("/"))
         dirname, filename = os.path.split(destination_path)
         if not os.path.isdir(dirname):
