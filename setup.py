@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_packages
+import sys
 
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -15,6 +16,11 @@ with open("dataplicity/_version.py") as f:
 with open("README.md") as f:
     long_desc = f.read()
 
+# Only require enum34 for Python versions without built-in enum support
+install_requires = ["six==1.10.0", "lomond==0.3.3"]
+if sys.version_info < (3, 4):
+    install_requires.append("enum34==1.1.6")
+
 setup(
     name="dataplicity",
     version=__version__,
@@ -27,6 +33,6 @@ setup(
     packages=find_packages(),
     classifiers=classifiers,
     entry_points={"console_scripts": ["dataplicity = dataplicity.app:main"]},
-    install_requires=["enum34==1.1.6", "six==1.10.0", "lomond==0.3.3"],
+    install_requires=install_requires,
     zip_safe=True,
 )
