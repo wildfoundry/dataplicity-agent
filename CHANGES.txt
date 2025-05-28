@@ -1,4 +1,4 @@
-0.5.12
+0.5.13
 ------
 
 Bump pex version for Ubuntu compatibility
