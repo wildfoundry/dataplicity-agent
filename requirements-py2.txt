@@ -1,0 +1,4 @@
+six==1.10.0
+lomond==0.3.3
+enum34==1.1.6
+backports.ssl-match-hostname==3.4.0.2
