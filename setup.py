@@ -23,7 +23,7 @@ with open("README.md") as f:
     long_desc = f.read()
 
 # Only require enum34 for Python versions without built-in enum support
-install_requires = ["six==1.10.0", "lomond==0.3.3", "distro==1.6.0"]
+install_requires = ["six==1.16.0", "lomond==0.3.3", "distro==1.6.0"]
 if sys.version_info < (3, 4):
     install_requires.append("enum34==1.1.6")
 
