@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # Detect Python command
 if command -v python3 &> /dev/null; then
     PYTHON_CMD="python3"
@@ -113,13 +115,15 @@ if [ "$goto_end" != "true" ]; then
 
   # Install packages in the build directory
   echo "Installing dependencies for Python 2.7..."
-  $pip2 install -q "dataplicity==${VERSION}" --pre
-  $pip2 install -q -r ../requirements-py2.txt
+  $pip2 install -q --target "$PWD" "dataplicity==${VERSION}" --pre
+  $pip2 install -q --target "$PWD" -r ../requirements-py2.txt
 
   # Create a launcher script
   cat > ../bin/dataplicity-py2 << EOF
 #!/bin/bash
-PYTHONPATH="$PWD" $python2 -m dataplicity.app "\$@"
+SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+PY2_SITE="\${SCRIPT_DIR}/../.build-py2"
+PYTHONPATH="\${PY2_SITE}" exec $python2 -m dataplicity.app "\$@"
 EOF
 
   chmod +x ../bin/dataplicity-py2
