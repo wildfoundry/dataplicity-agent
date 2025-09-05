@@ -39,6 +39,7 @@ setup(
     version=__version__,
     description="Platform for connected devices",
     long_description=long_desc,
+    long_description_content_type="text/markdown",
     author="WildFoundry",
     author_email="support@dataplicity.com",
     url="https://www.dataplicity.com",
