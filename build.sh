@@ -67,9 +67,8 @@ pip install -q pex==2.38.1
 
 # Build Python 3 version
 echo "Building ./bin/dataplicity for Python 3.x..."
-python -m pex dataplicity==${VERSION} --pre \
+python -m pex dataplicity==${VERSION} six==1.16.0 lomond==0.3.3 distro==1.6.0 --pre \
   --python-shebang='#!/usr/bin/env python3' \
-  --inherit-path=fallback \
   -r requirements-py3.txt \
   -o bin/dataplicity \
   -m dataplicity.app:main \
