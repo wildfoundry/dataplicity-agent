@@ -40,6 +40,7 @@ rm -f bin/dataplicity bin/dataplicity-py2
 
 # Define Python versions
 py3_versions=(3.7 3.9 3.10 3.11 3.12)
+goto_end=false
 
 #######################################
 # Build Python 3.x version
@@ -93,7 +94,7 @@ pyenv install -s 2.7.18 || {
   goto_end=true
 }
 
-if [ "$goto_end" != "true" ]; then
+if [ "${goto_end:-false}" != "true" ]; then
   python2="$pyenvRoot/versions/2.7.18/bin/python"
   pip2="$pyenvRoot/versions/2.7.18/bin/pip"
 
