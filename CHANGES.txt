@@ -1,7 +1,7 @@
 0.5.13
 ------
 
-Bump pex version for Ubuntu compatibility
+Bump pex version for compatibility
 
 0.4.27
 ------
