@@ -91,6 +91,9 @@ def test_channel_logs_exception_on_close(caplog, mocker, channel):
 def test_channel_on_data(caplog, channel):
     """ unit test for Channel::on_data
     """
+    # Set the logger level to capture debug messages
+    caplog.set_level(logging.DEBUG)
+
     chan = channel
     chan._closed = True
     num_log_entries = len(caplog.records)
@@ -122,6 +125,9 @@ def test_channel_on_control_with_closed_channel(caplog, channel):
     """ this unit test covers the code which is launched when there is an
         attempt to use the on_control function, but the channel has been closed
     """
+    # Set the logger level to capture debug messages
+    caplog.set_level(logging.DEBUG)
+
     chan = channel
     chan.on_close()
     num_log_entries = len(caplog.records)
