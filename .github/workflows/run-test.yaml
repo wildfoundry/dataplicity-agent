@@ -2,6 +2,9 @@ name: Run unit tests
 
 on: [push]
 
+permissions:
+  contents: read
+
 jobs:
   test-legacy:
     runs-on: ubuntu-22.04
