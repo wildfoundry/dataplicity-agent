@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import argparse
 import logging
+import os
 import logging.config
 import sys
 
@@ -52,7 +53,10 @@ class App(object):
             help="Set log level (INFO or WARNING or ERROR or DEBUG)",
         )
         parser.add_argument(
-            "--log-file", metavar="PATH", default=None, help="Set log file"
+            "--log-file",
+            metavar="PATH",
+            default=os.environ.get("DP_LOG_FILE") or None,
+            help="Set log file (or DP_LOG_FILE)",
         )
         parser.add_argument(
             "-d",
@@ -145,9 +149,17 @@ class App(object):
                         "backupCount": 5,
                         "filename": self.args.log_file,
                         "formatter": "simple",
-                    }
+                    },
+                    "console": {
+                        "level": log_level,
+                        "class": "logging.StreamHandler",
+                        "formatter": "simple",
+                        "stream": "ext://sys.stderr",
+                    },
                 },
-                "loggers": {"": {"level": log_level, "handlers": ["file"]}},
+                "loggers": {
+                    "": {"level": log_level, "handlers": ["file", "console"]}
+                },
             }
             logging.config.dictConfig(log_config)
         else:
