@@ -24,6 +24,7 @@ import logging
 import os
 import pty
 import select
+import signal
 import sys
 import termios
 import pwd
@@ -85,6 +86,7 @@ class Interceptor(object):
                     log.debug(
                         "switched group for remote process to %s(%s)", self.group, gid
                     )
+            signal.signal(signal.SIGINT, signal.SIG_DFL)
             if not argv:
                 argv = [os.environ["SHELL"]]
             os.execlp(argv[0], *argv)
