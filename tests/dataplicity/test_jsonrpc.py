@@ -181,3 +181,55 @@ def test_requests_have_a_socket_timeout(mocker):
 
     assert urlopen.call_args[1]['timeout'] == constants.JSONRPC_TIMEOUT
     assert constants.JSONRPC_TIMEOUT > 0
+
+
+def test_jsonrpc_honours_retry_after(mocker):
+    """429 + Retry-After should delay at least as long as the header says."""
+    from dataplicity.compat import HTTPError
+    from io import BytesIO
+
+    sleeps = []
+
+    class FakeHeaders(dict):
+        def getheader(self, name, default=None):
+            return self.get(name, default)
+
+    class FakeOk(object):
+        def read(self):
+            return dumps(
+                {'jsonrpc': '2.0', 'id': 2, 'result': {'ok': True}}
+            ).encode('utf-8')
+
+        def close(self):
+            return None
+
+    responses = [
+        HTTPError(
+            'http://example.invalid/rpc',
+            429,
+            'Too Many Requests',
+            FakeHeaders({'Retry-After': '2'}),
+            BytesIO(b''),
+        ),
+        FakeOk(),
+    ]
+
+    def fake_urlopen(req, timeout=None):
+        result = responses.pop(0)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    mocker.patch('dataplicity.jsonrpc.urlopen', side_effect=fake_urlopen)
+    mocker.patch(
+        'dataplicity.http_backoff.time.sleep',
+        side_effect=lambda s: sleeps.append(s),
+    )
+
+    body = JSONRPC('http://example.invalid/rpc')._send(
+        {'jsonrpc': '2.0', 'method': 'ping', 'id': 1}
+    )
+
+    assert 'ok' in body
+    assert sleeps
+    assert sleeps[0] >= 2.0

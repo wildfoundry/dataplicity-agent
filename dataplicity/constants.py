@@ -53,6 +53,9 @@ JSONRPC_TIMEOUT = get_environ_int("DATAPLICITY_JSONRPC_TIMEOUT", 60)
 # Minimum wait between JSON-RPC retries after transport / 429 / 5xx failures.
 JSONRPC_RETRY_MIN_WAIT = get_environ_int("DATAPLICITY_JSONRPC_RETRY_MIN_WAIT", 1)
 
+# Cap for Retry-After / exponential backoff on JSON-RPC retries.
+JSONRPC_RETRY_MAX_WAIT = get_environ_int("DATAPLICITY_JSONRPC_RETRY_MAX_WAIT", 300)
+
 # Number of bytes to read at a time, when copying date over the network
 # TODO: Replace this with a sensible chunk size once we identify the
 # issue with ssh over Porthole

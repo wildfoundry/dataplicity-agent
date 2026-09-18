@@ -6,11 +6,35 @@ import logging
 
 from . import constants
 from .compat import HTTPError, Request, urlopen, text_type, quote
-import time
-from random import random
+from .http_backoff import (
+    RETRYABLE_STATUS,
+    compute_backoff_seconds,
+    sleep_backoff,
+)
 
 
 log = logging.getLogger("agent")
+
+
+def _header_get(headers, name):
+    """Read a header from urllib response/error headers (Py2 + Py3)."""
+    if headers is None:
+        return None
+    try:
+        if hasattr(headers, "get"):
+            value = headers.get(name)
+            if value is not None:
+                return value
+            # Case-insensitive fallback for dict-like headers.
+            for key, val in headers.items():
+                if str(key).lower() == name.lower():
+                    return val
+    except Exception:
+        pass
+    try:
+        return headers.getheader(name)
+    except Exception:
+        return None
 
 
 class ProtocolError(Exception):
@@ -206,8 +230,8 @@ class JSONRPC(object):
         if self.device_serial:
             request.add_header(self.DEVICE_SERIAL_HEADER, str(self.device_serial))
 
-        # Local floor between attempts — does not depend on Retry-After.
         min_wait = max(1.0, float(constants.JSONRPC_RETRY_MIN_WAIT))
+        max_wait = max(min_wait, float(constants.JSONRPC_RETRY_MAX_WAIT))
         max_attempts = 3
         last_error = None
         for attempt in range(1, max_attempts + 1):
@@ -222,22 +246,35 @@ class JSONRPC(object):
             except HTTPError as exc:
                 status = getattr(exc, "code", None)
                 last_error = exc
-                if status in (429, 502, 503, 504) and attempt < max_attempts:
-                    delay = min_wait * (2 ** (attempt - 1)) + random() * 0.25
+                headers = getattr(exc, "headers", None) or getattr(exc, "hdrs", None)
+                retry_after = _header_get(headers, "Retry-After")
+                if status in RETRYABLE_STATUS and attempt < max_attempts:
+                    delay = compute_backoff_seconds(
+                        attempt,
+                        retry_after_header=retry_after,
+                        base=min_wait,
+                        maximum=max_wait,
+                    )
                     log.warning(
-                        "JSONRPC HTTP %s (attempt %s/%s); waiting %.1fs",
+                        "JSONRPC HTTP %s (attempt %s/%s); Retry-After=%s; waiting %.1fs",
                         status,
                         attempt,
                         max_attempts,
+                        retry_after,
                         delay,
                     )
-                    time.sleep(delay)
+                    sleep_backoff(delay)
                     continue
                 raise ServerUnreachableError(self.url, exc)
             except Exception as exc:
                 last_error = exc
                 if attempt < max_attempts:
-                    delay = min_wait * (2 ** (attempt - 1)) + random() * 0.25
+                    delay = compute_backoff_seconds(
+                        attempt,
+                        retry_after_header=None,
+                        base=min_wait,
+                        maximum=max_wait,
+                    )
                     log.warning(
                         "JSONRPC transport error (attempt %s/%s): %s; waiting %.1fs",
                         attempt,
@@ -245,7 +282,7 @@ class JSONRPC(object):
                         exc,
                         delay,
                     )
-                    time.sleep(delay)
+                    sleep_backoff(delay)
                     continue
                 raise ServerUnreachableError(self.url, exc)
 
