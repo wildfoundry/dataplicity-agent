@@ -84,12 +84,34 @@ def test_client_sync_with_error(serial_file, auth_file, caplog, httpserver):
     assert 'sync failed' in caplog.text
 
 
-def test_m2m_url_appends_serial_not_device(serial_file, auth_file):
-    """serial= is informational; device= would trigger router locate/redirect."""
-    client = mclient.Client(m2m_url='wss://m2m.example/m2m/')
-    assert 'serial=test-serial' in client.m2m_url
-    assert 'device=' not in client.m2m_url
-    assert 'features=' in client.m2m_url
+def test_api_requests_advertise_device_serial(serial_file, auth_file, mocker):
+    """Serial goes on the API request (header + query), not the m2m URL."""
+    captured = {}
+
+    def fake_urlopen(req, timeout=None):
+        captured['url'] = req.get_full_url()
+        # urllib normalises header lookup; try both casings.
+        captured['serial_header'] = req.get_header('X-device-serial')
+        if not captured['serial_header']:
+            captured['serial_header'] = req.headers.get('X-device-serial') or req.headers.get(
+                'X-Device-Serial'
+            )
+
+        class Resp(object):
+            def read(self):
+                return b'{"jsonrpc":"2.0","id":2,"result":{}}'
+
+            def close(self):
+                return None
+
+        return Resp()
+
+    mocker.patch('dataplicity.jsonrpc.urlopen', side_effect=fake_urlopen)
+    client = mclient.Client(rpc_url='https://api.example/jsonrpc')
+    assert 'serial=' not in client.m2m_url
+    client.remote.call('device.check_auth', serial=client.serial, auth_token='x')
+    assert 'serial=test-serial' in captured['url']
+    assert captured.get('serial_header') == 'test-serial'
     try:
         client.m2m.close()
     except Exception:

@@ -10,11 +10,11 @@ from collections import defaultdict, deque
 
 from lomond import WebSocket
 from lomond.constants import USER_AGENT as LOMOND_USER_AGENT
+from lomond.persist import persist
 from lomond.errors import WebSocketError
 
 from . import bencode
 from . import packets
-from .persist import persist
 from .. import constants
 from ..compat import text_type
 from .dispatcher import Dispatcher, expose
@@ -275,8 +275,6 @@ class WSClient(threading.Thread):
                     self.websocket,
                     ping_rate=constants.M2M_PING_RATE,
                     ping_timeout=constants.M2M_PING_TIMEOUT,
-                    min_wait=constants.M2M_RECONNECT_MIN_WAIT,
-                    max_wait=constants.M2M_RECONNECT_MAX_WAIT,
                 ):
                     log.debug("WS %r", event)
                     try:

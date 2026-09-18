@@ -65,10 +65,6 @@ def test_persist_uses_a_ping_timeout(client, mocker):
     assert kwargs["ping_rate"] < kwargs["ping_timeout"]
     # We have to give up and reconnect before the router kicks us.
     assert 0 < kwargs["ping_timeout"] < ROUTER_UNRESPONSIVE_SECONDS
-    # Local reconnect wait — does not depend on server Retry-After.
-    assert kwargs["min_wait"] == constants.M2M_RECONNECT_MIN_WAIT
-    assert kwargs["max_wait"] == constants.M2M_RECONNECT_MAX_WAIT
-    assert kwargs["min_wait"] < kwargs["max_wait"]
 
 
 def test_unresponsive_event_is_logged(client, mocker):

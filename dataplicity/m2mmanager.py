@@ -136,10 +136,10 @@ class M2MManager(object):
             return
         # Keep notified_identity unset so we retry, but back off first. Auth
         # failures come back as HTTP 200 JSON-RPC errors, not 429.
-        self._identity_retry_after = now + constants.M2M_AUTH_FAIL_BACKOFF
+        self._identity_retry_after = now + constants.API_AUTH_FAIL_BACKOFF
         log.warning(
             "m2m identity notify failed; retrying in %ss",
-            constants.M2M_AUTH_FAIL_BACKOFF,
+            constants.API_AUTH_FAIL_BACKOFF,
         )
 
     def on_sync(self, batch):

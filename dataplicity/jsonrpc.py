@@ -5,7 +5,9 @@ import json
 import logging
 
 from . import constants
-from .compat import urlopen, text_type
+from .compat import HTTPError, Request, urlopen, text_type, quote
+import time
+from random import random
 
 
 log = logging.getLogger("agent")
@@ -168,15 +170,29 @@ class JSONRPC(object):
     """A client for a JSONRPC server."""
 
     unknown_error_msg = "the server did not supply further information"
+    # Edge-visible device id for CloudFront / WAF blocks. Not a secret.
+    DEVICE_SERIAL_HEADER = "X-Device-Serial"
 
     def __init__(self, url, timeout=None):
         self.url = url
         self.call_id = 1
         self.timeout = constants.JSONRPC_TIMEOUT if timeout is None else timeout
+        self.device_serial = None
+
+    def set_device_serial(self, serial):
+        """Attach the device serial to subsequent API requests for edge filtering."""
+        self.device_serial = serial or None
 
     def new_call_id(self):
         self.call_id += 1
         return self.call_id
+
+    def _request_url(self):
+        """API URL with serial= when known (CloudFront/WAF can match query args)."""
+        if not self.device_serial:
+            return self.url
+        sep = "&" if "?" in self.url else "?"
+        return self.url + sep + "serial=" + quote(str(self.device_serial), safe="")
 
     def _send(self, call):
         call_json = json.dumps(call)
@@ -184,19 +200,59 @@ class JSONRPC(object):
         if isinstance(call_json, text_type):
             call_json = call_json.encode("utf-8")
         log.debug("JSONRPC request %i Kb", len(call_json) // 1000)
-        url_file = None
-        try:
-            try:
-                url_file = urlopen(self.url, call_json, timeout=self.timeout)
-                response_json = url_file.read().decode("utf-8")
-            finally:
-                if url_file is not None:
-                    url_file.close()
-        except Exception as e:
-            raise ServerUnreachableError(self.url, e)
-        log.debug(response_json[:1000])
 
-        return response_json
+        request = Request(self._request_url(), data=call_json)
+        request.add_header("Content-Type", "application/json")
+        if self.device_serial:
+            request.add_header(self.DEVICE_SERIAL_HEADER, str(self.device_serial))
+
+        # Local floor between attempts — does not depend on Retry-After.
+        min_wait = max(1.0, float(constants.JSONRPC_RETRY_MIN_WAIT))
+        max_attempts = 3
+        last_error = None
+        for attempt in range(1, max_attempts + 1):
+            url_file = None
+            try:
+                try:
+                    url_file = urlopen(request, timeout=self.timeout)
+                    response_json = url_file.read().decode("utf-8")
+                finally:
+                    if url_file is not None:
+                        url_file.close()
+            except HTTPError as exc:
+                status = getattr(exc, "code", None)
+                last_error = exc
+                if status in (429, 502, 503, 504) and attempt < max_attempts:
+                    delay = min_wait * (2 ** (attempt - 1)) + random() * 0.25
+                    log.warning(
+                        "JSONRPC HTTP %s (attempt %s/%s); waiting %.1fs",
+                        status,
+                        attempt,
+                        max_attempts,
+                        delay,
+                    )
+                    time.sleep(delay)
+                    continue
+                raise ServerUnreachableError(self.url, exc)
+            except Exception as exc:
+                last_error = exc
+                if attempt < max_attempts:
+                    delay = min_wait * (2 ** (attempt - 1)) + random() * 0.25
+                    log.warning(
+                        "JSONRPC transport error (attempt %s/%s): %s; waiting %.1fs",
+                        attempt,
+                        max_attempts,
+                        exc,
+                        delay,
+                    )
+                    time.sleep(delay)
+                    continue
+                raise ServerUnreachableError(self.url, exc)
+
+            log.debug(response_json[:1000])
+            return response_json
+
+        raise ServerUnreachableError(self.url, last_error or Exception("unknown"))
 
     def call(self, method, **params):
         """Call a remote method."""
