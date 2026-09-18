@@ -82,3 +82,15 @@ def test_client_sync_with_error(serial_file, auth_file, caplog, httpserver):
     # teardown for meta cache
     device_meta._META_CACHE = None
     assert 'sync failed' in caplog.text
+
+
+def test_m2m_url_appends_serial_not_device(serial_file, auth_file):
+    """serial= is informational; device= would trigger router locate/redirect."""
+    client = mclient.Client(m2m_url='wss://m2m.example/m2m/')
+    assert 'serial=test-serial' in client.m2m_url
+    assert 'device=' not in client.m2m_url
+    assert 'features=' in client.m2m_url
+    try:
+        client.m2m.close()
+    except Exception:
+        pass

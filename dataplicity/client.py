@@ -14,6 +14,7 @@ from . import constants
 from . import device_meta
 from . import jsonrpc
 from .clockcheck import ClockCheckThread
+from .compat import quote
 from .directory_scanner import DirectoryScanner
 from .disk_tools import disk_usage
 from .m2mmanager import M2MManager
@@ -23,6 +24,14 @@ from .tags import get_tag_list, TagError
 import six
 
 log = logging.getLogger("agent")
+
+
+def _append_query_param(url, name, value):
+    """Append a query parameter; safe for urls that already have ``?``/``&``."""
+    if not value:
+        return url
+    sep = "&" if "?" in url else "?"
+    return url + sep + name + "=" + quote(str(value), safe="")
 
 
 class Client(object):
@@ -75,6 +84,12 @@ class Client(object):
                 self.remote_directory_path or constants.REMOTE_DIRECTORY_LOCATION
             )
             log.info("remote_directory=%s", self.remote_directory_path)
+
+            # Advertise the device serial on the upgrade URL. Use ``serial=``,
+            # never ``device=`` — the router treats ``device`` as a locate name
+            # and may redirect/404. Unknown query keys are ignored today, so
+            # this does not change the server contract for existing routers.
+            self.m2m_url = _append_query_param(self.m2m_url, "serial", self.serial)
 
             self.poll_rate_seconds = 60
             self.disk_poll_rate_seconds = 60 * 60

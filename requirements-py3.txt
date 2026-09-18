@@ -1,3 +1,3 @@
 six==1.16.0
-lomond==0.3.3
+lomond==0.3.4
 distro==1.6.0

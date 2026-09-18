@@ -33,6 +33,32 @@ REMOTE_DIRECTORY_LOCATION = "/home/dataplicity/remote"
 # Client will reconnect if the server hasn't responded in this time
 MAX_TIME_SINCE_LAST_PACKET = 100.0  # seconds or None
 
+# How often the m2m websocket sends a ping frame
+M2M_PING_RATE = get_environ_int("DATAPLICITY_M2M_PING_RATE", 30)
+
+# Drop and reconnect the m2m websocket if the server hasn't ponged in this
+# time. Must stay well under the router's unresponsive threshold (270s) so
+# the client re-establishes the session before the server kicks it.
+M2M_PING_TIMEOUT = get_environ_int("DATAPLICITY_M2M_PING_TIMEOUT", 120)
+
+# Wait at least this long between m2m reconnect attempts after a failed
+# connect / rejected upgrade / dropped session. Floor is 1s even if env is 0
+# so a reconnect storm cannot become a tight busy-loop.
+M2M_RECONNECT_MIN_WAIT = get_environ_int("DATAPLICITY_M2M_RECONNECT_MIN_WAIT", 1)
+
+# Cap reconnect back-off so a long outage still recovers, but not so low that
+# a fleet reconnect storm can overwhelm the router / API.
+M2M_RECONNECT_MAX_WAIT = get_environ_int("DATAPLICITY_M2M_RECONNECT_MAX_WAIT", 120)
+
+# After check_auth / m2m.associate fails, wait before trying again. Auth
+# failures return HTTP 200 JSON-RPC errors (not 429), so without this the
+# poll loop retries every few seconds forever.
+M2M_AUTH_FAIL_BACKOFF = get_environ_int("DATAPLICITY_M2M_AUTH_FAIL_BACKOFF", 30)
+
+# Socket timeout for JSONRPC calls. Without this a stalled connection blocks
+# the calling thread forever.
+JSONRPC_TIMEOUT = get_environ_int("DATAPLICITY_JSONRPC_TIMEOUT", 60)
+
 # Number of bytes to read at a time, when copying date over the network
 # TODO: Replace this with a sensible chunk size once we identify the
 # issue with ssh over Porthole

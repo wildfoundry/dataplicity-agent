@@ -5,6 +5,7 @@ from __future__ import print_function, unicode_literals
 import logging
 import subprocess
 import threading
+import time
 
 from . import constants
 from .compat import PY3
@@ -95,6 +96,7 @@ class M2MManager(object):
         self.identity = identity
         self.terminals = {}
         self.notified_identity = None
+        self._identity_retry_after = 0.0
         self.m2m_client = WSClient(self, url, remote_directory)
         self.services_limiter = Limiter("services", constants.LIMIT_SERVICES)
         self.terminals_limiter = Limiter("terminals", constants.LIMIT_TERMINALS)
@@ -120,9 +122,25 @@ class M2MManager(object):
     def set_identity(self, identity):
         """Set the m2m identity, and also notifies the dataplicity server if required."""
         self.identity = identity
-        if identity and identity != self.notified_identity:
-            log.info("m2m identity changed (%s)", identity.decode("utf-8", "replace"))
-            self.notified_identity = self.client.set_m2m_identity(identity)
+        if not identity or identity == self.notified_identity:
+            return
+        now = time.time()
+        if now < self._identity_retry_after:
+            # Auth / associate just failed; wait before hammering the API again.
+            return
+        log.info("m2m identity changed (%s)", identity.decode("utf-8", "replace"))
+        notified = self.client.set_m2m_identity(identity)
+        if notified:
+            self.notified_identity = notified
+            self._identity_retry_after = 0.0
+            return
+        # Keep notified_identity unset so we retry, but back off first. Auth
+        # failures come back as HTTP 200 JSON-RPC errors, not 429.
+        self._identity_retry_after = now + constants.M2M_AUTH_FAIL_BACKOFF
+        log.warning(
+            "m2m identity notify failed; retrying in %ss",
+            constants.M2M_AUTH_FAIL_BACKOFF,
+        )
 
     def on_sync(self, batch):
         """Called by sync, so it can inject commands in to the batch request."""

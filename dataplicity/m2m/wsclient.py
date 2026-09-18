@@ -10,11 +10,12 @@ from collections import defaultdict, deque
 
 from lomond import WebSocket
 from lomond.constants import USER_AGENT as LOMOND_USER_AGENT
-from lomond.persist import persist
 from lomond.errors import WebSocketError
 
 from . import bencode
 from . import packets
+from .persist import persist
+from .. import constants
 from ..compat import text_type
 from .dispatcher import Dispatcher, expose
 from .packets import M2MPacket as Packet
@@ -23,6 +24,9 @@ from .._version import __version__
 
 
 log = logging.getLogger("m2m")
+
+# How long the identity sync worker blocks before re-checking for shutdown
+IDENTITY_SYNC_POLL = 1.0
 
 
 class ClientError(Exception):
@@ -192,6 +196,9 @@ class WSClient(threading.Thread):
         self.channels = {}
         self.last_packet_time = time.time()
 
+        self._identity_sync_pending = threading.Event()
+        self._identity_sync_exit = threading.Event()
+
         self.callback_lock = threading.RLock()
         self.write_lock = threading.Lock()
         self.callbacks = defaultdict(list)
@@ -258,9 +265,19 @@ class WSClient(threading.Thread):
 
     def run(self):
         """Main websocket handling loop."""
+        identity_thread = threading.Thread(target=self._sync_identity_loop)
+        identity_thread.name = "m2m-identity"
+        identity_thread.daemon = True
+        identity_thread.start()
         try:
             with self.websocket:
-                for event in persist(self.websocket):
+                for event in persist(
+                    self.websocket,
+                    ping_rate=constants.M2M_PING_RATE,
+                    ping_timeout=constants.M2M_PING_TIMEOUT,
+                    min_wait=constants.M2M_RECONNECT_MIN_WAIT,
+                    max_wait=constants.M2M_RECONNECT_MAX_WAIT,
+                ):
                     log.debug("WS %r", event)
                     try:
                         self.on_event(event)
@@ -270,12 +287,21 @@ class WSClient(threading.Thread):
             log.info("exit requested")
         except Exception:
             log.exception("unhandled error from websocket")
-        self.on_close()
+        finally:
+            self._stop_identity_sync()
+            self.on_disconnected()
 
     def on_event(self, event):
         """Called when new websocket events arrive."""
         if event.name == "ready":
             self.on_ready()
+        elif event.name == "unresponsive":
+            # lomond force-disconnects straight after this, so persist()
+            # reconnects rather than sitting on a half-open socket.
+            log.warning(
+                "no pong from server in %ss; dropping m2m websocket",
+                constants.M2M_PING_TIMEOUT,
+            )
         elif event.name == "disconnected":
             self.on_disconnected()
         elif event.name == "binary":
@@ -284,9 +310,12 @@ class WSClient(threading.Thread):
             self.sync_identity()
 
     def close(self, timeout=5):
-        self.websocket.close()
+        # Mark closed and release the worker first, so a failure closing the
+        # socket can't leave the client half shut down.
         self._closed = True
         self.identity = None
+        self._stop_identity_sync()
+        self.websocket.close()
 
     def send(self, packet, *args, **kwargs):
         """Send a packet. Will encode if necessary."""
@@ -328,8 +357,33 @@ class WSClient(threading.Thread):
             self.on_packet(packet)
 
     def sync_identity(self):
-        """Ask manager to set the m2m identity."""
-        self.manager.set_identity(self.identity)
+        """Ask manager to set the m2m identity.
+
+        The manager notifies the Dataplicity server over blocking HTTP, so the
+        work is handed to a worker thread. Doing it inline would stop this
+        thread reading packets, and the server would kick us as unresponsive.
+        """
+        self._identity_sync_pending.set()
+
+    def _stop_identity_sync(self):
+        """Wake the identity sync worker so it can exit."""
+        self._identity_sync_exit.set()
+        self._identity_sync_pending.set()
+
+    def _sync_identity_loop(self):
+        """Push identity changes to the manager, away from the read loop."""
+        while not self._identity_sync_exit.is_set():
+            if not self._identity_sync_pending.wait(IDENTITY_SYNC_POLL):
+                continue
+            # Cleared first so a sync requested while we are in the call below
+            # is not lost; the manager only hits the network on a change.
+            self._identity_sync_pending.clear()
+            if self._identity_sync_exit.is_set():
+                break
+            try:
+                self.manager.set_identity(self.identity)
+            except Exception:
+                log.exception("error syncing m2m identity")
 
     def on_disconnected(self):
         """Called when ws socket closes."""

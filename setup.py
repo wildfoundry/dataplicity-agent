@@ -23,7 +23,7 @@ with open("README.md") as f:
     long_desc = f.read()
 
 install_requires = [
-    "lomond==0.3.3",
+    "lomond==0.3.4",
     "distro==1.6.0",
 ]
 

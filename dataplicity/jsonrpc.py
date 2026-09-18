@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import json
 import logging
 
+from . import constants
 from .compat import urlopen, text_type
 
 
@@ -168,9 +169,10 @@ class JSONRPC(object):
 
     unknown_error_msg = "the server did not supply further information"
 
-    def __init__(self, url):
+    def __init__(self, url, timeout=None):
         self.url = url
         self.call_id = 1
+        self.timeout = constants.JSONRPC_TIMEOUT if timeout is None else timeout
 
     def new_call_id(self):
         self.call_id += 1
@@ -185,7 +187,7 @@ class JSONRPC(object):
         url_file = None
         try:
             try:
-                url_file = urlopen(self.url, call_json)
+                url_file = urlopen(self.url, call_json, timeout=self.timeout)
                 response_json = url_file.read().decode("utf-8")
             finally:
                 if url_file is not None:

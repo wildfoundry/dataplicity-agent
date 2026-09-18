@@ -1,9 +1,11 @@
 from json import dumps
 
 import pytest
+from dataplicity import constants
 from dataplicity.jsonrpc import (JSONRPC, ErrorCode, InvalidResponseError,
                                  ProtocolError, RemoteError, RemoteMethodError,
                                  Batch)
+from mock import Mock
 import six
 
 
@@ -165,3 +167,17 @@ def test_send_batch_calls(httpserver, response):
         assert str(exc.value.message) == expected_message
     elif six.PY3:
         assert exc.value.args[0] == expected_message
+
+
+def test_requests_have_a_socket_timeout(mocker):
+    """An untimed request can block its caller, including the m2m thread."""
+    url_file = Mock()
+    url_file.read.return_value = dumps(
+        {'jsonrpc': '2.0', 'id': 2, 'result': 'test-result'}
+    ).encode('utf-8')
+    urlopen = mocker.patch('dataplicity.jsonrpc.urlopen', return_value=url_file)
+
+    JSONRPC('http://example.invalid/rpc').call('foo')
+
+    assert urlopen.call_args[1]['timeout'] == constants.JSONRPC_TIMEOUT
+    assert constants.JSONRPC_TIMEOUT > 0
