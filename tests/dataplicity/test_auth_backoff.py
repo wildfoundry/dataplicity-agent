@@ -3,6 +3,8 @@ from __future__ import unicode_literals
 
 import json
 
+from mock import patch
+
 from dataplicity.auth_backoff import (
     AuthBackoffGate,
     _monotonic,
@@ -77,6 +79,16 @@ def test_parse_retry_after_seconds():
     assert parse_retry_after("") is None
 
 
+def _counting_send(calls):
+    real_send = jsonrpc.JSONRPC._send
+
+    def counting_send(self, payload):
+        calls["n"] += 1
+        return real_send(self, payload)
+
+    return counting_send
+
+
 def test_set_m2m_identity_long_backoff_on_auth_failure(
     serial_file, auth_file, httpserver
 ):
@@ -105,18 +117,21 @@ def test_set_m2m_identity_long_backoff_on_auth_failure(
         error_body, code=200, headers={"Content-Type": "application/json"}
     )
 
-    client = mclient.Client(rpc_url=httpserver.url)
-    assert client.set_m2m_identity(b"id-1") is None
-    assert len(httpserver.requests) == 1
-    remaining = client.auth_gate.next_mono - _monotonic()
-    assert remaining >= 250.0
+    calls = {"n": 0}
+    # Avoid live M2M connect racing associate against the test server.
+    with patch("dataplicity.m2m.wsclient.WSClient.start"):
+        with patch.object(jsonrpc.JSONRPC, "_send", _counting_send(calls)):
+            client = mclient.Client(rpc_url=httpserver.url)
+            assert client.set_m2m_identity(b"id-1") is None
+            assert calls["n"] == 1
+            remaining = client.auth_gate.next_mono - _monotonic()
+            assert remaining >= 250.0
 
-    manager = M2MManager(client, "ws://example", remote_directory=None)
-    for _ in range(20):
-        manager.set_identity(b"id-1")
-    # Poll ticks must not hit the API again while gated.
-    assert len(httpserver.requests) == 1
-    assert manager.notified_identity is None
+            manager = M2MManager(client, "ws://example", remote_directory=None)
+            for _ in range(20):
+                manager.set_identity(b"id-1")
+            assert calls["n"] == 1
+            assert manager.notified_identity is None
 
 
 def test_sync_skips_while_auth_gated(serial_file, auth_file, httpserver, caplog):
@@ -136,9 +151,12 @@ def test_sync_skips_while_auth_gated(serial_file, auth_file, httpserver, caplog)
         error_body, code=200, headers={"Content-Type": "application/json"}
     )
 
-    client = mclient.Client(rpc_url=httpserver.url)
-    client.sync()
-    assert len(httpserver.requests) == 1
-    assert "long backoff" in caplog.text
-    client.sync()
-    assert len(httpserver.requests) == 1
+    calls = {"n": 0}
+    with patch("dataplicity.m2m.wsclient.WSClient.start"):
+        with patch.object(jsonrpc.JSONRPC, "_send", _counting_send(calls)):
+            client = mclient.Client(rpc_url=httpserver.url)
+            client.sync()
+            assert calls["n"] == 1
+            assert "long backoff" in caplog.text
+            client.sync()
+            assert calls["n"] == 1
