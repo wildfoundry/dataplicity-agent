@@ -1,3 +1,10 @@
+0.5.15a1
+-------
+
+Canary (not the fleet default): long auth backoff on deleted/revoked device
+(JSON-RPC authorization failed / invalid credentials / unknown device, or HTTP
+401/403/404) — 5 minute floor, 1 hour cap; associate/sync polls stay gated.
+
 0.5.13
 ------
 
