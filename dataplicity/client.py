@@ -13,6 +13,11 @@ from ._version import __version__
 from . import constants
 from . import device_meta
 from . import jsonrpc
+from .auth_backoff import (
+    AuthBackoffGate,
+    is_auth_failure_exception,
+    retry_after_from_exception,
+)
 from .clockcheck import ClockCheckThread
 from .directory_scanner import DirectoryScanner
 from .disk_tools import disk_usage
@@ -50,6 +55,8 @@ class Client(object):
         self._sync_lock = Lock()
         self._sent_meta = False
         self.exit_event = Event()
+        # Shared quiet period after deleted-device / revoked-token auth fails.
+        self.auth_gate = AuthBackoffGate()
         self._init()
         self._tag_list = None
 
@@ -129,6 +136,8 @@ class Client(object):
 
         if now >= self.next_disk_poll_time:
             self.next_disk_poll_time = now + self.disk_poll_rate_seconds
+            if not self.auth_gate.ready():
+                return
             disk_space = disk_usage("/")
 
             with self.remote.batch() as batch:
@@ -155,6 +164,8 @@ class Client(object):
 
         try:
             if tag_list != self._tag_list:
+                if not self.auth_gate.ready():
+                    return
                 log.debug("new machine tags: %r", tag_list)
                 with self.remote.batch() as batch:
                     batch.call_with_id(
@@ -169,8 +180,11 @@ class Client(object):
                         "device.set_machine_defined_tags",
                         tag_list=tag_list,
                     )
+                batch.get_result("authenticate_result")
                 batch.get_result("set_machine_defined_tags_result")
         except jsonrpc.JSONRPCError as error:
+            if self._handle_auth_failure(error, "set tag list"):
+                return None
             log.error(
                 'unable to set tag list ("%s"=%s, "%s")',
                 error.method,
@@ -179,6 +193,8 @@ class Client(object):
             )
             return None
         except jsonrpc.ServerUnreachableError as error:
+            if self._handle_auth_failure(error, "set tag list"):
+                return None
             log.debug("set tag list failed: %s", error)
             return None
         except Exception as error:
@@ -186,6 +202,7 @@ class Client(object):
             return None
         else:
             # Success! Set cached tag list
+            self.auth_gate.record_success()
             self._tag_list = tag_list
 
     def poll(self):
@@ -222,7 +239,25 @@ class Client(object):
             with self._sync_lock:
                 self._sync()
         except Exception as e:
+            if self._handle_auth_failure(e, "sync"):
+                return
             log.error("sync failed %s", e)
+
+    def _handle_auth_failure(self, exc, context):
+        """Apply long auth backoff; return True when handled as auth failure."""
+        if not is_auth_failure_exception(exc):
+            return False
+        delay = self.auth_gate.record_auth_failure(
+            retry_after_header=retry_after_from_exception(exc)
+        )
+        log.warning(
+            "%s unauthorized/gone (%s); long backoff %.1fs "
+            "(skipping retries; re-register to recover)",
+            context,
+            exc,
+            delay,
+        )
+        return True
 
     def _sync(self):
         """Perform sync."""
@@ -232,6 +267,8 @@ class Client(object):
         sync_id = self.make_sync_id()
         try:
             if not self._sent_meta:
+                if not self.auth_gate.ready():
+                    return
                 with self.remote.batch() as batch:
                     batch.call_with_id(
                         "authenticate_result",
@@ -243,6 +280,7 @@ class Client(object):
                     )
                     self._sync_meta(batch)
                 batch.get_result("authenticate_result")
+                self.auth_gate.record_success()
                 self._check_meta(batch)
 
         finally:
@@ -316,6 +354,8 @@ class Client(object):
         """
         if self.auth_token is None:
             return None
+        if not self.auth_gate.ready():
+            return None
 
         try:
             log.debug(
@@ -340,6 +380,8 @@ class Client(object):
             batch.get_result("authenticate_result")
             batch.get_result("associate_result")
         except jsonrpc.JSONRPCError as e:
+            if self._handle_auth_failure(e, "m2m.associate"):
+                return None
             log.error(
                 'unable to associate m2m identity ("%s"=%s, "%s")',
                 e.method,
@@ -348,6 +390,8 @@ class Client(object):
             )
             return None
         except jsonrpc.ServerUnreachableError as e:
+            if self._handle_auth_failure(e, "m2m.associate"):
+                return None
             log.debug("set m2m identity failed, %s", e)
             return None
         except Exception as error:
@@ -355,5 +399,6 @@ class Client(object):
             return None
         else:
             # If we made it here the server has acknowledged it received the identity
+            self.auth_gate.record_success()
             log.debug("server received m2m identity %s", identity)
             return identity
