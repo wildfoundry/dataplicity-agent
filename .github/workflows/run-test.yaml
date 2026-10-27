@@ -7,7 +7,7 @@ permissions:
 
 jobs:
   test-legacy:
-    runs-on: ubuntu-22.04
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.GENERAL_RUNNER || 'wf-general' }}
     strategy:
       matrix:
         python-version: ['2.7', '3.5', '3.6']
@@ -24,7 +24,7 @@ jobs:
           python -m tox -e py$(echo ${{ matrix.python-version }} | tr -d .)
 
   test-modern:
-    runs-on: ubuntu-22.04
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.GENERAL_RUNNER || 'wf-general' }}
     strategy:
       matrix:
         python-version: ['3.7', '3.9', '3.10', '3.11', '3.12']
